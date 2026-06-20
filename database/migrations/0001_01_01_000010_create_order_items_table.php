@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->integer('qty');
-            $table->string('selected_variant')->nullable();
             $table->string('status')->default('pending'); // pending, cooking, ready
             $table->text('notes')->nullable();
             $table->timestamps();

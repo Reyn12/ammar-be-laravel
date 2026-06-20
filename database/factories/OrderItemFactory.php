@@ -21,7 +21,6 @@ class OrderItemFactory extends Factory
             'order_id' => Order::factory(),
             'product_id' => Product::factory(),
             'qty' => fake()->numberBetween(1, 5),
-            'selected_variant' => fake()->optional()->randomElement(['Ice', 'Hot', 'Normal']),
             'status' => 'pending',
             'notes' => fake()->optional()->sentence(),
         ];

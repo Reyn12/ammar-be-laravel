@@ -35,8 +35,8 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function variants(): HasMany
+    public function addonGroups(): HasMany
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->hasMany(ProductAddonGroup::class);
     }
 }

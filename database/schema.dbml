@@ -11,7 +11,7 @@ Table categories {
 
 Table users {
   id int [pk, increment]
-  branch_id int [ref: > branches.id]
+  branch_id int [ref: > branches.id] 
   role varchar [note: 'owner, cashier, kitchen']
   username varchar
   password varchar
@@ -46,11 +46,21 @@ Table products {
   is_available boolean
 }
 
-Table product_variants {
+Table product_addon_groups {
   id int [pk, increment]
   product_id int [ref: > products.id]
-  name varchar [note: 'contoh: Ice, Hot, Normal']
-  additional_price int [note: 'isi 0 kalau gratis']
+  name varchar [note: 'contoh: Variasi Suhu, Syrup, Additional']
+  is_required boolean [note: 'true kalau Wajib, false kalau Opsional']
+  min_qty int [note: 'minimal pilih, misal 1']
+  max_qty int [note: 'maksimal pilih, misal 1 buat radio, 5 buat checkbox']
+}
+
+Table product_addons {
+  id int [pk, increment]
+  group_id int [ref: > product_addon_groups.id]
+  name varchar [note: 'contoh: Dingin, Panas, Caramel']
+  price int [note: 'harga tambahan, 0 kalau gratis']
+  is_available boolean [note: 'buat handle tulisan stok habis']
 }
 
 Table configs {
@@ -78,9 +88,15 @@ Table order_items {
   order_id int [ref: > orders.id]
   product_id int [ref: > products.id]
   qty int
-  selected_variant varchar [note: 'simpan pilihan user, misal: Ice']
   status varchar [note: 'pending, cooking, ready']
-  notes text
+  notes text [note: 'buat nyimpen inputan Catatan']
   created_at datetime
   updated_at datetime
+}
+
+Table order_item_addons {
+  id int [pk, increment]
+  order_item_id int [ref: > order_items.id]
+  addon_id int [ref: > product_addons.id]
+  price int [note: 'catat harga addon pas dipesan']
 }

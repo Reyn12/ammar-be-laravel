@@ -8,14 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['order_id', 'product_id', 'qty', 'status', 'notes'])]
-class OrderItem extends Model
+#[Fillable(['product_id', 'name', 'is_required', 'min_qty', 'max_qty'])]
+class ProductAddonGroup extends Model
 {
     use HasFactory;
 
-    public function order(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(Order::class);
+        return [
+            'is_required' => 'boolean',
+        ];
     }
 
     public function product(): BelongsTo
@@ -25,6 +27,6 @@ class OrderItem extends Model
 
     public function addons(): HasMany
     {
-        return $this->hasMany(OrderItemAddon::class);
+        return $this->hasMany(ProductAddon::class, 'group_id');
     }
 }
