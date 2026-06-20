@@ -1,0 +1,86 @@
+Table branches {
+  id int [pk, increment]
+  name varchar
+  address text
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar
+}
+
+Table users {
+  id int [pk, increment]
+  branch_id int [ref: > branches.id]
+  role varchar [note: 'owner, cashier, kitchen']
+  username varchar
+  password varchar
+  name varchar
+}
+
+Table shifts {
+  id int [pk, increment]
+  user_id int [ref: > users.id]
+  start_time datetime
+  end_time datetime
+  status varchar [note: 'active, closed']
+  starting_cash int [note: 'uang modal awal']
+  expected_cash int [note: 'total cash masuk menurut sistem']
+  actual_cash int [note: 'uang fisik pas shift out']
+}
+
+Table tables {
+  id int [pk, increment]
+  branch_id int [ref: > branches.id]
+  table_number int
+  qr_code_url varchar
+}
+
+Table products {
+  id int [pk, increment]
+  branch_id int [ref: > branches.id]
+  category_id int [ref: > categories.id]
+  image_url varchar [note: 'url foto produk']
+  name varchar
+  price int
+  is_available boolean
+}
+
+Table product_variants {
+  id int [pk, increment]
+  product_id int [ref: > products.id]
+  name varchar [note: 'contoh: Ice, Hot, Normal']
+  additional_price int [note: 'isi 0 kalau gratis']
+}
+
+Table configs {
+  id int [pk, increment]
+  branch_id int [ref: > branches.id]
+  key varchar [note: 'store_name, tax, dll']
+  value text
+}
+
+Table orders {
+  id int [pk, increment]
+  shift_id int [ref: > shifts.id, null]
+  table_id int [ref: > tables.id, null]
+  branch_id int [ref: > branches.id]
+  order_type varchar [note: 'dine_in, takeaway']
+  status varchar [note: 'pending, cooking, ready, completed']
+  payment_method varchar [note: 'qris, cash']
+  payment_status varchar [note: 'unpaid, paid']
+  total_amount int
+  created_at datetime
+}
+
+Table order_items {
+  id int [pk, increment]
+  order_id int [ref: > orders.id]
+  product_id int [ref: > products.id]
+  qty int
+  selected_variant varchar [note: 'simpan pilihan user, misal: Ice']
+  status varchar [note: 'pending, cooking, ready']
+  notes text
+  created_at datetime
+  updated_at datetime
+}

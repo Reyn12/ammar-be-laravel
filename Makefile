@@ -58,7 +58,7 @@ build: ## Build asset frontend
 npm-dev: ## Vite dev server
 	npm run dev
 
-fetch-main ## Pindah Ke Branch Main
+fetch-main: ## Pindah Ke Branch Main
 	git fetch
 	git checkout main
 	git pull origin main

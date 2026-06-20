@@ -24,6 +24,7 @@ class ShiftFactory extends Factory
             'end_time' => null,
             'status' => 'active',
             'starting_cash' => fake()->numberBetween(100000, 500000),
+            'expected_cash' => null,
             'actual_cash' => null,
         ];
     }
@@ -36,6 +37,7 @@ class ShiftFactory extends Factory
             return [
                 'end_time' => $endTime,
                 'status' => 'closed',
+                'expected_cash' => fake()->numberBetween(100000, 1000000),
                 'actual_cash' => fake()->numberBetween(100000, 1000000),
             ];
         });

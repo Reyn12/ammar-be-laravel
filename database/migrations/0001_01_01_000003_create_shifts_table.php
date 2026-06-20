@@ -18,6 +18,7 @@ return new class extends Migration
             $table->dateTime('end_time')->nullable();
             $table->string('status')->default('active'); // active, closed
             $table->integer('starting_cash');
+            $table->integer('expected_cash')->nullable();
             $table->integer('actual_cash')->nullable();
             $table->timestamps();
         });

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'start_time', 'end_time', 'status', 'starting_cash', 'actual_cash'])]
+#[Fillable(['user_id', 'start_time', 'end_time', 'status', 'starting_cash', 'expected_cash', 'actual_cash'])]
 class Shift extends Model
 {
     use HasFactory;
