@@ -2,25 +2,21 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 
-#[Fillable(['branch_id', 'role', 'username', 'name', 'password'])]
-#[Hidden(['password'])]
-class User extends Authenticatable
+#[Fillable(['branch_id', 'category_id', 'image_url', 'name', 'price', 'is_available'])]
+class Product extends Model
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
+            'is_available' => 'boolean',
         ];
     }
 
@@ -29,8 +25,13 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
-    public function shifts(): HasMany
+    public function category(): BelongsTo
     {
-        return $this->hasMany(Shift::class);
+        return $this->belongsTo(Category::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }
