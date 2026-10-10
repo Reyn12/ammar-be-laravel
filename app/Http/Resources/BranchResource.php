@@ -25,7 +25,7 @@ class BranchResource extends JsonResource
             'address' => $this->address,
             'description' => $this->description,
             'phone' => $this->phone,
-            'image_url' => $this->image_url,
+            'image_url' => $this->image_url ? (str_starts_with($this->image_url, 'http') ? $this->image_url : asset($this->image_url)) : null,
             'order_types' => ['dine_in', 'takeaway'],
             'is_open_now' => $this->isOpenNow($hours),
             'opening_hours' => $hours->map(fn (BranchOpeningHour $hour) => [
