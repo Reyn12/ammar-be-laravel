@@ -34,7 +34,7 @@ return [
     'firebase' => [
         'project_id' => env('FIREBASE_PROJECT_ID'),
         'credentials' => env('FIREBASE_CREDENTIALS'),
-        'android_channel' => 'order_masuk',
+        'android_channel' => 'order_masuk_v2',
         'android_sound' => 'notif_order_masuk',
     ],
 

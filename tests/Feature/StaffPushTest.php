@@ -110,7 +110,7 @@ test('new cash order pushes to cashier and owner only', function () {
     Http::assertSent(fn ($request) => str_contains($request->url(), 'projects/ammar-test/messages:send')
         && $request['message']['notification']['title'] === 'Pesanan tunai baru'
         && $request['message']['notification']['body'] === 'Takeaway · Budi'
-        && $request['message']['android']['notification']['channel_id'] === 'order_masuk'
+        && $request['message']['android']['notification']['channel_id'] === 'order_masuk_v2'
         && $request['message']['android']['notification']['sound'] === 'notif_order_masuk'
         && $request['message']['data']['order_id'] === (string) $event->order_id);
 });
