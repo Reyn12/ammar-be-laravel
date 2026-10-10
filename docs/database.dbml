@@ -44,10 +44,11 @@ Table users {
   username varchar [not null, unique]
   name varchar [not null]
   password varchar [not null]
+  is_active boolean [not null, default: true, note: 'false = akun dinonaktifkan, tidak bisa login']
   created_at timestamp
   updated_at timestamp
 
-  Note: 'Staf (kasir & koki). Customer ada di tabel customers.'
+  Note: 'Staf (owner, kasir, koki). Customer ada di tabel customers. Token login staf (Sanctum) ada di personal_access_tokens.'
 }
 
 Table configs {

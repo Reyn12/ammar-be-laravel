@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\Staff\ShiftController;
+use App\Http\Controllers\Api\V1\Staff\StaffOrderController;
 use App\Http\Controllers\Api\V1\TableController;
 use App\Http\Controllers\Api\V1\TripayCallbackController;
 use Illuminate\Support\Facades\Route;
@@ -31,11 +33,31 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('menu', [MenuController::class, 'index'])->name('menu');
     });
 
+    // Kasir & owner
+    Route::middleware(['auth:sanctum', 'role:cashier,owner'])->group(function () {
+        Route::get('orders', [StaffOrderController::class, 'index'])->name('staff.orders.index');
+        Route::get('orders/{order}', [StaffOrderController::class, 'show'])->whereNumber('order')->name('staff.orders.show');
+        Route::post('orders/{order}/confirm-cash', [StaffOrderController::class, 'confirmCash'])->whereNumber('order')->name('staff.orders.confirm-cash');
+    });
+
+    Route::prefix('shifts')->name('shifts.')->middleware('auth:sanctum')->group(function () {
+        Route::middleware('role:cashier')->group(function () {
+            Route::get('active', [ShiftController::class, 'active'])->name('active');
+            Route::post('open', [ShiftController::class, 'open'])->name('open');
+            Route::post('{shift}/close', [ShiftController::class, 'close'])->whereNumber('shift')->name('close');
+        });
+
+        Route::middleware('role:owner')->group(function () {
+            Route::get('/', [ShiftController::class, 'index'])->name('index');
+            Route::post('{shift}/force-close', [ShiftController::class, 'forceClose'])->whereNumber('shift')->name('force-close');
+        });
+    });
+
     Route::get('tables/{token}', [TableController::class, 'show'])->name('tables.show');
 
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::post('/', [OrderController::class, 'store'])->middleware('customer.auth:optional')->name('store');
-        Route::get('{code}', [OrderController::class, 'show'])->name('show');
+        Route::get('{code}', [OrderController::class, 'show'])->where('code', 'AMR-[0-9]{8}-[0-9]+')->name('show');
     });
 
     Route::middleware('customer.auth')->prefix('me')->name('me.')->group(function () {
