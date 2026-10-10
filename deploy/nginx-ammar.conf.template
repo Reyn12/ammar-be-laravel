@@ -22,10 +22,13 @@ server {
 
     # SSE kasir & dapur: jangan di-buffer, dan beri waktu baca lebih panjang dari
     # durasi satu koneksi (STAFF_STREAM_DURATION, default 25 detik).
+    # Jangan pakai snippets/fastcgi-php.conf di sini: isinya `try_files $fastcgi_script_name =404`
+    # sehingga URL non-.php seperti ini dijawab 404. Cukup fastcgi_params + index.php Laravel.
     location = /api/v1/stream/orders {
-        include snippets/fastcgi-php.conf;
+        include fastcgi_params;
         fastcgi_pass unix:/run/php/ammar.sock;
         fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
         fastcgi_buffering off;
         fastcgi_read_timeout 75s;
         gzip off;

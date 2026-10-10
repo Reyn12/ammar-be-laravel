@@ -35,6 +35,10 @@ class StaffEvent extends Model
     {
         $order->loadMissing('table');
 
+        // Jangan pakai $order->table di sini: di dalam turunan Model, itu membaca properti protected
+        // Model::$table (nama tabel), bukan relasi table().
+        $tableNumber = $order->getRelation('table')?->table_number;
+
         return static::create([
             'branch_id' => $order->branch_id,
             'type' => $type,
@@ -42,7 +46,7 @@ class StaffEvent extends Model
             'data' => [
                 'order_id' => $order->id,
                 'code' => $order->code,
-                'place_label' => $order->order_type === 'takeaway' ? 'Takeaway' : 'Meja '.($order->table?->table_number ?? '-'),
+                'place_label' => $order->order_type === 'takeaway' ? 'Takeaway' : 'Meja '.($tableNumber ?? '-'),
                 'customer_name' => $order->customer_name,
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,

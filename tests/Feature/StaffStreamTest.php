@@ -65,3 +65,13 @@ test('old events can be pruned', function () {
 
     expect(StaffEvent::count())->toBe(1);
 });
+
+test('event payload carries the table number or takeaway label', function () {
+    $table = \App\Models\Table::factory()->create(['branch_id' => $this->branch->id, 'table_number' => 7]);
+
+    $dineIn = Order::factory()->create(['branch_id' => $this->branch->id, 'order_type' => 'dine_in', 'table_id' => $table->id]);
+    $takeaway = Order::factory()->create(['branch_id' => $this->branch->id, 'order_type' => 'takeaway', 'table_id' => null]);
+
+    expect(StaffEvent::emit(StaffEvent::ORDER_PAID, $dineIn)->data['place_label'])->toBe('Meja 7')
+        ->and(StaffEvent::emit(StaffEvent::ORDER_PAID, $takeaway)->data['place_label'])->toBe('Takeaway');
+});
