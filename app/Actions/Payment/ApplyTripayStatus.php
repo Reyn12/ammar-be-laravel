@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\Notification\SendOrderReceipt;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,8 @@ class ApplyTripayStatus
         'FAILED' => 'failed',
         'REFUND' => 'refund',
     ];
+
+    public function __construct(private readonly SendOrderReceipt $sendReceipt) {}
 
     /**
      * Terapkan status dari Tripay (callback atau cek manual) ke payment dan order.
@@ -30,7 +33,7 @@ class ApplyTripayStatus
             return $payment;
         }
 
-        return DB::transaction(function () use ($payment, $status, $data) {
+        $updated = DB::transaction(function () use ($payment, $status, $data) {
             $payment->update([
                 'status' => $status,
                 'amount_received' => $data['amount_received'] ?? $payment->amount_received,
@@ -48,5 +51,12 @@ class ApplyTripayStatus
 
             return $payment->refresh();
         });
+
+        // Struk WhatsApp dikirim setelah transaksi database selesai.
+        if ($status === 'paid') {
+            $this->sendReceipt->handle($updated->order);
+        }
+
+        return $updated;
     }
 }

@@ -248,8 +248,8 @@ Table payments {
 Table notifications {
   id bigint [pk, increment]
   order_id bigint [not null, ref: > orders.id]
-  channel varchar [not null, default: 'whatsapp', note: 'whatsapp | email']
-  recipient varchar [not null, note: 'Nomor WA atau alamat email']
+  channel varchar [not null, default: 'whatsapp', note: 'whatsapp (via Fonnte)']
+  recipient varchar [not null, note: 'Nomor WhatsApp tujuan']
   message text [not null]
   status varchar [not null, default: 'pending', note: 'pending | sent | failed | retried']
   retry_count int [not null, default: 0]

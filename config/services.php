@@ -34,6 +34,12 @@ return [
         'project_id' => env('FIREBASE_PROJECT_ID'),
     ],
 
+    // WhatsApp gateway Fonnte (kirim struk pesanan ke customer).
+    'fonnte' => [
+        'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
+        'token' => env('FONNTE_TOKEN'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
