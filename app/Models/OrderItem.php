@@ -8,7 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['order_id', 'product_id', 'qty', 'status', 'notes'])]
+#[Fillable([
+    'order_id',
+    'product_id',
+    'batch_id',
+    'product_name',
+    'qty',
+    'price',
+    'status',
+    'notes',
+])]
 class OrderItem extends Model
 {
     use HasFactory;
@@ -16,6 +25,11 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function product(): BelongsTo

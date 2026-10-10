@@ -1,0 +1,249 @@
+// Paste ke https://dbdiagram.io/d  (Import > DBML)
+// Sistem pemesanan RM Ayam Bakar Ammar: customer (Next.js), kasir & dapur (Flutter).
+// Nilai kolom status disimpan sebagai string; daftar nilai ada di Note tiap kolom.
+
+Project ammar_be {
+  database_type: 'MySQL'
+  Note: 'Backend Laravel - sistem pemesanan makanan berbasis QR meja'
+}
+
+// ---------------------------------------------------------------
+// Toko & staf
+// ---------------------------------------------------------------
+
+Table branches {
+  id bigint [pk, increment]
+  name varchar [not null]
+  address text [not null]
+  description text [note: 'Deskripsi singkat toko (halaman Detail Toko)']
+  phone varchar
+  image_url varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table branch_opening_hours {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  day_of_week tinyint [not null, note: '1 = Senin ... 7 = Minggu']
+  open_time time
+  close_time time
+  is_closed boolean [not null, default: false]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (branch_id, day_of_week) [unique]
+  }
+}
+
+Table users {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  role varchar [not null, note: 'cashier | kitchen (| owner)']
+  username varchar [not null, unique]
+  name varchar [not null]
+  password varchar [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  Note: 'Staf (kasir & koki). Customer ada di tabel customers.'
+}
+
+Table configs {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  key varchar [not null, note: 'mis. store_name, tax']
+  value text [not null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table shifts {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id, note: 'Kasir pemilik shift']
+  start_time datetime [not null]
+  end_time datetime
+  status varchar [not null, default: 'active', note: 'active | closed']
+  starting_cash int [not null]
+  expected_cash int
+  actual_cash int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table tables {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  table_number int [not null]
+  qr_token varchar(64) [unique, note: 'Token acak di URL QR meja; regenerate = QR lama tidak berlaku']
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (branch_id, table_number) [unique]
+  }
+
+  Note: 'Meja. Kasir/koki melihat nomor meja lewat orders.table_id.'
+}
+
+// ---------------------------------------------------------------
+// Customer (login Google via Firebase)
+// ---------------------------------------------------------------
+
+Table customers {
+  id bigint [pk, increment]
+  firebase_uid varchar [not null, unique]
+  name varchar [not null]
+  email varchar [not null, unique]
+  phone varchar [unique, note: 'Dipakai untuk riwayat pesanan']
+  phone_verified_at timestamp
+  avatar_url varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+// ---------------------------------------------------------------
+// Menu
+// ---------------------------------------------------------------
+
+Table categories {
+  id bigint [pk, increment]
+  name varchar [not null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table products {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  category_id bigint [not null, ref: > categories.id]
+  image_url varchar
+  name varchar [not null]
+  price int [not null, note: 'Rupiah, harga dasar']
+  is_available boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table product_addon_groups {
+  id bigint [pk, increment]
+  product_id bigint [not null, ref: > products.id]
+  name varchar [not null, note: 'mis. Level Pedas, Tambahan']
+  is_required boolean [not null, default: false]
+  min_qty int [not null, default: 0]
+  max_qty int [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+
+  Note: 'Variant = grup is_required true & max_qty 1. Addon = grup opsional, boleh pilih banyak.'
+}
+
+Table product_addons {
+  id bigint [pk, increment]
+  group_id bigint [not null, ref: > product_addon_groups.id]
+  name varchar [not null, note: 'mis. Lv 1, Extra Sambal']
+  price int [not null, default: 0, note: 'Tambahan harga']
+  is_available boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// ---------------------------------------------------------------
+// Pesanan
+// ---------------------------------------------------------------
+
+Table orders {
+  id bigint [pk, increment]
+  code varchar [unique, note: 'AMR-YYYYMMDD-NNN, dibuat otomatis']
+  shift_id bigint [ref: > shifts.id, note: 'Shift kasir saat pesanan masuk']
+  table_id bigint [ref: > tables.id, note: 'Null untuk takeaway']
+  customer_id bigint [ref: > customers.id, note: 'Null bila pesan tanpa login']
+  branch_id bigint [not null, ref: > branches.id]
+  customer_name varchar [note: 'Snapshot data pemesan']
+  customer_phone varchar [note: 'Snapshot; kunci riwayat pesanan']
+  customer_email varchar
+  order_type varchar [not null, note: 'dine_in | takeaway']
+  status varchar [not null, default: 'pending', note: 'pending | cooking | ready | completed | cancelled']
+  payment_method varchar [note: 'qris | cash']
+  payment_status varchar [not null, default: 'unpaid', note: 'unpaid | paid | expired']
+  total_amount int [not null, default: 0, note: 'Sudah termasuk pajak']
+  tax_amount int [not null, default: 0]
+  cash_received int [note: 'Uang diterima kasir (tunai)']
+  confirmed_by bigint [ref: > users.id, note: 'Kasir yang approve pembayaran tunai']
+  paid_at timestamp
+  expires_at timestamp [note: 'Batas bayar QRIS']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    customer_phone
+  }
+}
+
+Table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  product_id bigint [not null, ref: > products.id]
+  batch_id bigint [ref: > batches.id, note: 'Pengelompokan masak di dapur']
+  product_name varchar [note: 'Snapshot nama saat transaksi']
+  qty int [not null]
+  price int [not null, default: 0, note: 'Snapshot harga satuan saat transaksi']
+  status varchar [not null, default: 'pending', note: 'pending | cooking | ready']
+  notes text [note: 'Catatan dari customer']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_item_addons {
+  id bigint [pk, increment]
+  order_item_id bigint [not null, ref: > order_items.id]
+  addon_id bigint [not null, ref: > product_addons.id]
+  name varchar [note: 'Snapshot nama addon/variant']
+  price int [not null, note: 'Snapshot tambahan harga']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table batches {
+  id bigint [pk, increment]
+  branch_id bigint [not null, ref: > branches.id]
+  product_id bigint [not null, ref: > products.id]
+  status varchar [not null, default: 'open', note: 'open | full | cooking | done']
+  total_qty int [not null, default: 0]
+  order_count int [not null, default: 0, note: 'Maks 6 nota per batch']
+  created_at timestamp
+}
+
+// ---------------------------------------------------------------
+// Pembayaran & notifikasi
+// ---------------------------------------------------------------
+
+Table payments {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  midtrans_order_id varchar [not null]
+  transaction_id varchar
+  payment_type varchar [note: 'qris, gopay, bank_transfer, dll']
+  qr_url text [note: 'QR dari payment gateway']
+  gross_amount int [not null]
+  transaction_status varchar [not null, default: 'pending', note: 'pending | settlement | expire | deny']
+  paid_at timestamp
+  expires_at timestamp
+  created_at timestamp
+
+  Note: 'Hanya untuk pembayaran online (QRIS). Tunai dicatat di orders.'
+}
+
+Table notifications {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  channel varchar [not null, default: 'whatsapp', note: 'whatsapp | email']
+  recipient varchar [not null, note: 'Nomor WA atau alamat email']
+  message text [not null]
+  status varchar [not null, default: 'pending', note: 'pending | sent | failed | retried']
+  retry_count int [not null, default: 0]
+  sent_at timestamp
+  created_at timestamp
+}

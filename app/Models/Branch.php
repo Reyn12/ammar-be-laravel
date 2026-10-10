@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'address'])]
+#[Fillable(['name', 'address', 'description', 'phone', 'image_url'])]
 class Branch extends Model
 {
     use HasFactory;
+
+    public function openingHours(): HasMany
+    {
+        return $this->hasMany(BranchOpeningHour::class);
+    }
 
     public function users(): HasMany
     {

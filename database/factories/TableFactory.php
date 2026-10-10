@@ -19,7 +19,7 @@ class TableFactory extends Factory
         return [
             'branch_id' => Branch::factory(),
             'table_number' => fake()->numberBetween(1, 50),
-            'qr_code_url' => null,
+            'is_active' => true,
         ];
     }
 }

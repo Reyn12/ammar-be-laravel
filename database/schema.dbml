@@ -11,8 +11,8 @@ Table categories {
 
 Table users {
   id int [pk, increment]
-  branch_id int [ref: > branches.id] 
-  role varchar [note: 'owner, cashier, kitchen']
+  branch_id int [ref: > branches.id]
+  role varchar [note: 'cashier, kitchen']
   username varchar
   password varchar
   name varchar
@@ -87,6 +87,7 @@ Table order_items {
   id int [pk, increment]
   order_id int [ref: > orders.id]
   product_id int [ref: > products.id]
+  batch_id int [ref: > batches.id, null]
   qty int
   status varchar [note: 'pending, cooking, ready']
   notes text [note: 'buat nyimpen inputan Catatan']
@@ -99,4 +100,37 @@ Table order_item_addons {
   order_item_id int [ref: > order_items.id]
   addon_id int [ref: > product_addons.id]
   price int [note: 'catat harga addon pas dipesan']
+}
+
+Table batches {
+  id int [pk, increment]
+  branch_id int [ref: > branches.id]
+  product_id int [ref: > products.id]
+  status varchar [note: 'open, full, cooking, done']
+  total_qty int [note: 'total porsi dalam batch']
+  order_count int [note: 'jumlah nota yang gabung, maks 6']
+  created_at datetime
+}
+
+Table payments {
+  id int [pk, increment]
+  order_id int [ref: > orders.id]
+  midtrans_order_id varchar
+  transaction_id varchar
+  payment_type varchar [note: 'qris, gopay, bank_transfer, dll']
+  gross_amount int
+  transaction_status varchar [note: 'pending, settlement, expire, deny']
+  paid_at datetime [null]
+  created_at datetime
+}
+
+Table notifications {
+  id int [pk, increment]
+  order_id int [ref: > orders.id]
+  phone_number varchar
+  message text
+  status varchar [note: 'sent, failed, retried']
+  retry_count int
+  sent_at datetime [null]
+  created_at datetime
 }

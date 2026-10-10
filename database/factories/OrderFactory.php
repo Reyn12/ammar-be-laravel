@@ -25,6 +25,8 @@ class OrderFactory extends Factory
             'status' => 'pending',
             'payment_method' => null,
             'payment_status' => 'unpaid',
+            'customer_name' => fake()->name(),
+            'customer_phone' => '08'.fake()->numerify('##########'),
             'total_amount' => 0,
         ];
     }
