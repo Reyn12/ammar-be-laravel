@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -21,8 +22,13 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::get('tables/{token}', [TableController::class, 'show'])->name('tables.show');
 
     Route::prefix('orders')->name('orders.')->group(function () {
-        Route::post('/', [OrderController::class, 'store'])->name('store');
+        Route::post('/', [OrderController::class, 'store'])->middleware('customer.auth:optional')->name('store');
         Route::get('{code}', [OrderController::class, 'show'])->name('show');
+    });
+
+    Route::middleware('customer.auth')->prefix('me')->name('me.')->group(function () {
+        Route::get('/', [CustomerController::class, 'me'])->name('show');
+        Route::get('orders', [CustomerController::class, 'orders'])->name('orders');
     });
 
     Route::post('payments/tripay/callback', TripayCallbackController::class)->name('payments.tripay.callback');

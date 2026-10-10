@@ -18,6 +18,7 @@ class OrderController extends Controller
     public function store(StoreOrderRequest $request, CreateOrder $action, TripayClient $tripay): JsonResponse
     {
         $data = $request->validated();
+        $data['customer_id'] = $request->attributes->get('customer')?->id;
 
         if ($data['payment_method'] === 'qris' && ! $tripay->isConfigured()) {
             return response()->json(['message' => 'Pembayaran QRIS belum tersedia. Silakan pilih tunai.'], 503);

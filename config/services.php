@@ -29,6 +29,11 @@ return [
         'return_url' => env('TRIPAY_RETURN_URL'),
     ],
 
+    // Firebase Authentication (login Google customer). Cukup project id untuk verifikasi token.
+    'firebase' => [
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

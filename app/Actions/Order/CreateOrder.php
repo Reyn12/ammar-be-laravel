@@ -39,6 +39,7 @@ class CreateOrder
             $order = Order::create([
                 'branch_id' => $branch->id,
                 'table_id' => $table?->id,
+                'customer_id' => $data['customer_id'] ?? null,
                 'shift_id' => $this->activeShift($branch)?->id,
                 'customer_name' => $data['customer']['name'],
                 'customer_phone' => $data['customer']['phone'],
