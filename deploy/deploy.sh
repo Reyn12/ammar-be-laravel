@@ -16,6 +16,9 @@ git pull --ff-only origin "$BRANCH"
 echo "==> Install dependency (tanpa dev)"
 composer install --no-dev --optimize-autoloader --no-interaction
 
+echo "==> Link folder upload (foto menu)"
+php artisan storage:link 2>/dev/null || true
+
 echo "==> Migrasi database"
 php artisan migrate --force
 
@@ -25,6 +28,6 @@ php artisan route:cache
 php artisan event:cache
 
 echo "==> Muat ulang PHP-FPM"
-sudo systemctl reload php8.3-fpm
+sudo systemctl reload php8.4-fpm
 
 echo "==> Selesai. Versi sekarang: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%s)"

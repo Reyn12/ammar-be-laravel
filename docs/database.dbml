@@ -47,6 +47,7 @@ Table users {
   is_active boolean [not null, default: true, note: 'false = akun dinonaktifkan, tidak bisa login']
   created_at timestamp
   updated_at timestamp
+  deleted_at timestamp [note: 'Diarsipkan (soft delete); riwayat shift/pesanan tetap mencatat nama']
 
   Note: 'Staf (owner, kasir, koki). Customer ada di tabel customers. Token login staf (Sanctum) ada di personal_access_tokens.'
 }
@@ -81,6 +82,7 @@ Table tables {
   is_active boolean [not null, default: true]
   created_at timestamp
   updated_at timestamp
+  deleted_at timestamp [note: 'Diarsipkan (soft delete), bukan dihapus']
 
   indexes {
     (branch_id, table_number) [unique]
@@ -126,6 +128,7 @@ Table products {
   is_available boolean [not null, default: true]
   created_at timestamp
   updated_at timestamp
+  deleted_at timestamp [note: 'Diarsipkan (soft delete), bukan dihapus']
 }
 
 Table product_addon_groups {
@@ -137,6 +140,7 @@ Table product_addon_groups {
   max_qty int [not null, default: 1]
   created_at timestamp
   updated_at timestamp
+  deleted_at timestamp [note: 'Diarsipkan (soft delete), bukan dihapus']
 
   Note: 'Variant = grup is_required true & max_qty 1. Addon = grup opsional, boleh pilih banyak.'
 }
@@ -149,6 +153,7 @@ Table product_addons {
   is_available boolean [not null, default: true]
   created_at timestamp
   updated_at timestamp
+  deleted_at timestamp [note: 'Diarsipkan (soft delete), bukan dihapus']
 }
 
 // ---------------------------------------------------------------

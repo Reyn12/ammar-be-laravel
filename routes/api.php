@@ -9,7 +9,11 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\Staff\KitchenController;
 use App\Http\Controllers\Api\V1\Staff\ShiftController;
 use App\Http\Controllers\Api\V1\Staff\StaffOrderController;
+use App\Http\Controllers\Api\V1\Staff\StaffProductController;
+use App\Http\Controllers\Api\V1\Staff\StaffTableController;
+use App\Http\Controllers\Api\V1\Staff\StaffUserController;
 use App\Http\Controllers\Api\V1\Staff\StreamController;
+use App\Http\Controllers\Api\V1\Staff\UploadController;
 use App\Http\Controllers\Api\V1\TableController;
 use App\Http\Controllers\Api\V1\TripayCallbackController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +46,30 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('orders/{order}/confirm-cash', [StaffOrderController::class, 'confirmCash'])->whereNumber('order')->name('staff.orders.confirm-cash');
     });
 
+    // Kelola menu (kasir & owner)
+    Route::middleware(['auth:sanctum', 'role:cashier,owner'])->group(function () {
+        Route::get('categories', [StaffProductController::class, 'categories'])->name('staff.categories');
+        Route::get('products', [StaffProductController::class, 'index'])->name('staff.products.index');
+        Route::post('products', [StaffProductController::class, 'store'])->name('staff.products.store');
+        Route::put('products/{product}', [StaffProductController::class, 'update'])->whereNumber('product')->name('staff.products.update');
+        Route::delete('products/{product}', [StaffProductController::class, 'destroy'])->whereNumber('product')->name('staff.products.destroy');
+        Route::post('uploads/product-image', [UploadController::class, 'productImage'])->name('staff.uploads.product-image');
+    });
+
+    // Owner: akun staf dan meja
+    Route::middleware(['auth:sanctum', 'role:owner'])->group(function () {
+        Route::get('users', [StaffUserController::class, 'index'])->name('staff.users.index');
+        Route::post('users', [StaffUserController::class, 'store'])->name('staff.users.store');
+        Route::put('users/{user}', [StaffUserController::class, 'update'])->whereNumber('user')->name('staff.users.update');
+        Route::delete('users/{user}', [StaffUserController::class, 'destroy'])->whereNumber('user')->name('staff.users.destroy');
+
+        Route::get('tables', [StaffTableController::class, 'index'])->name('staff.tables.index');
+        Route::post('tables', [StaffTableController::class, 'store'])->name('staff.tables.store');
+        Route::put('tables/{table}', [StaffTableController::class, 'update'])->whereNumber('table')->name('staff.tables.update');
+        Route::delete('tables/{table}', [StaffTableController::class, 'destroy'])->whereNumber('table')->name('staff.tables.destroy');
+        Route::post('tables/{table}/regenerate-qr', [StaffTableController::class, 'regenerateQr'])->whereNumber('table')->name('staff.tables.regenerate-qr');
+    });
+
     // Dapur (koki & owner)
     Route::middleware(['auth:sanctum', 'role:kitchen,owner'])->prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('orders', [KitchenController::class, 'orders'])->name('orders');
@@ -68,7 +96,8 @@ Route::prefix('v1')->name('v1.')->group(function () {
         });
     });
 
-    Route::get('tables/{token}', [TableController::class, 'show'])->name('tables.show');
+    // Token QR meja panjang (32 karakter); batasan ini mencegah bentrok dengan rute staf /tables/{id}
+    Route::get('tables/{token}', [TableController::class, 'show'])->where('token', '[A-Za-z0-9]{20,}')->name('tables.show');
 
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::post('/', [OrderController::class, 'store'])->middleware('customer.auth:optional')->name('store');

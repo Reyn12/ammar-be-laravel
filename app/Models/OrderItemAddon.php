@@ -19,6 +19,6 @@ class OrderItemAddon extends Model
 
     public function addon(): BelongsTo
     {
-        return $this->belongsTo(ProductAddon::class, 'addon_id');
+        return $this->belongsTo(ProductAddon::class, 'addon_id')->withTrashed();
     }
 }

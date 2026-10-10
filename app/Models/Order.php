@@ -68,7 +68,7 @@ class Order extends Model
 
     public function confirmedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'confirmed_by');
+        return $this->belongsTo(User::class, 'confirmed_by')->withTrashed();
     }
 
     public function payment(): HasOne
@@ -88,7 +88,7 @@ class Order extends Model
 
     public function table(): BelongsTo
     {
-        return $this->belongsTo(Table::class);
+        return $this->belongsTo(Table::class)->withTrashed();
     }
 
     public function branch(): BelongsTo

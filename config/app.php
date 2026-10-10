@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Alamat web customer (Next.js); dipakai untuk isi QR meja.
+    'customer_url' => env('CUSTOMER_APP_URL', 'https://ammar-fe-nextjs.vercel.app'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

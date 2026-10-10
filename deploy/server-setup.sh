@@ -3,7 +3,7 @@
 #
 #   sudo DOMAIN=api-ammar.pranalatech.com \
 #        REPO_URL=git@github.com:USER/ammar-be-laravel.git \
-#        EMAIL=kamu@email.com \
+#        EMAIL=kamu@email.com \        (opsional)
 #        bash server-setup.sh
 #
 # Opsional: SEED=1 (isi data awal: toko, menu, meja, akun demo), BRANCH=main
@@ -12,7 +12,7 @@ set -euo pipefail
 
 : "${DOMAIN:?isi DOMAIN, mis. api-ammar.pranalatech.com}"
 : "${REPO_URL:?isi REPO_URL}"
-: "${EMAIL:?isi EMAIL untuk sertifikat HTTPS}"
+EMAIL="${EMAIL:-}"   # opsional; untuk notifikasi Lets Encrypt
 BRANCH="${BRANCH:-main}"
 SEED="${SEED:-0}"
 APP_DIR=/var/www/ammar-be
@@ -27,23 +27,33 @@ echo "==> [1/9] Paket sistem"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get upgrade -y
+# composer.lock memakai paket yang mewajibkan PHP >= 8.4.1, sedangkan Ubuntu 24.04 membawa 8.3,
+# jadi PHP 8.4 diambil dari repo ppa:ondrej/php.
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:ondrej/php
+apt-get update -y
+apt-get purge -y 'php8.3*' || true
 apt-get install -y nginx mysql-server git unzip curl ufw fail2ban unattended-upgrades \
-  php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip \
-  php8.3-bcmath php8.3-intl composer certbot python3-certbot-nginx
+  php8.4-fpm php8.4-cli php8.4-mysql php8.4-mbstring php8.4-xml php8.4-curl php8.4-zip \
+  php8.4-bcmath php8.4-intl composer certbot python3-certbot-nginx
 timedatectl set-timezone Asia/Jakarta
 
 echo "==> [2/9] User deploy"
 if ! id "$APP_USER" >/dev/null 2>&1; then
   adduser --disabled-password --gecos "" "$APP_USER"
-  # pakai kunci SSH yang sama dengan akun yang sedang login (root/ubuntu)
-  if [ -f /root/.ssh/authorized_keys ]; then
+  # pakai kunci SSH yang sama dengan akun yang menjalankan skrip (ubuntu lewat sudo, atau root)
+  KEY_SRC="/root/.ssh/authorized_keys"
+  if [ -n "${SUDO_USER:-}" ] && [ -f "/home/$SUDO_USER/.ssh/authorized_keys" ]; then
+    KEY_SRC="/home/$SUDO_USER/.ssh/authorized_keys"
+  fi
+  if [ -f "$KEY_SRC" ]; then
     install -d -m 700 -o "$APP_USER" -g "$APP_USER" "/home/$APP_USER/.ssh"
-    install -m 600 -o "$APP_USER" -g "$APP_USER" /root/.ssh/authorized_keys "/home/$APP_USER/.ssh/authorized_keys"
+    install -m 600 -o "$APP_USER" -g "$APP_USER" "$KEY_SRC" "/home/$APP_USER/.ssh/authorized_keys"
   fi
 fi
 # deploy hanya boleh me-reload service tertentu tanpa password
 cat > /etc/sudoers.d/ammar-deploy <<SUDO
-$APP_USER ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.3-fpm, /usr/bin/systemctl restart php8.3-fpm, /usr/bin/systemctl reload nginx, /usr/bin/systemctl restart nginx, /usr/bin/systemctl status php8.3-fpm, /usr/bin/systemctl status nginx, /usr/bin/systemctl status mysql
+$APP_USER ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm, /usr/bin/systemctl restart php8.4-fpm, /usr/bin/systemctl reload nginx, /usr/bin/systemctl restart nginx, /usr/bin/systemctl status php8.4-fpm, /usr/bin/systemctl status nginx, /usr/bin/systemctl status mysql
 SUDO
 chmod 440 /etc/sudoers.d/ammar-deploy
 
@@ -92,30 +102,47 @@ sudo -u "$APP_USER" composer install --no-dev --optimize-autoloader --no-interac
 grep -q '^APP_KEY=base64' .env || sudo -u "$APP_USER" php artisan key:generate --force
 chown -R "$APP_USER":www-data storage bootstrap/cache
 chmod -R ug+rwX storage bootstrap/cache
+sudo -u "$APP_USER" php artisan storage:link 2>/dev/null || true   # foto menu yang diunggah
 sudo -u "$APP_USER" php artisan migrate --force
-if [ "$SEED" = "1" ]; then sudo -u "$APP_USER" php artisan db:seed --force; fi
+if [ "$SEED" = "1" ]; then
+  sudo -u "$APP_USER" php artisan db:seed --force
+  # Akun demo bawaan seeder memakai password "password". Ganti SEKARANG dengan password acak
+  # (sebelum Nginx membuka aplikasi). Password disimpan di file khusus root.
+  STAFF_PASS_FILE=/root/.ammar-staff-password
+  if [ ! -f "$STAFF_PASS_FILE" ]; then
+    openssl rand -base64 12 | tr -d '=+/' > "$STAFF_PASS_FILE"
+    chmod 600 "$STAFF_PASS_FILE"
+  fi
+  STAFF_PASS="$(cat "$STAFF_PASS_FILE")"
+  sudo -u "$APP_USER" env STAFF_PASS="$STAFF_PASS" php artisan tinker --execute='App\Models\User::query()->get()->each(fn ($u) => $u->update(["password" => getenv("STAFF_PASS")]));'
+  echo "   Password akun owner/kasir1/koki1 diganti acak; lihat: sudo cat $STAFF_PASS_FILE"
+fi
 sudo -u "$APP_USER" php artisan config:cache
 sudo -u "$APP_USER" php artisan route:cache
 sudo -u "$APP_USER" php artisan event:cache
 
 echo "==> [7/9] PHP-FPM dan Nginx"
-install -m 644 "$HERE/php-fpm-ammar.conf" /etc/php/8.3/fpm/pool.d/ammar.conf
-rm -f /etc/php/8.3/fpm/pool.d/www.conf
+install -m 644 "$HERE/php-fpm-ammar.conf" /etc/php/8.4/fpm/pool.d/ammar.conf
+rm -f /etc/php/8.4/fpm/pool.d/www.conf
 sed "s#__DOMAIN__#$DOMAIN#g" "$HERE/nginx-ammar.conf.template" > /etc/nginx/sites-available/ammar
 ln -sf /etc/nginx/sites-available/ammar /etc/nginx/sites-enabled/ammar
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
-systemctl restart php8.3-fpm
+systemctl restart php8.4-fpm
 systemctl reload nginx
 
 echo "==> [8/9] HTTPS (Lets Encrypt)"
 SERVER_IP="$(curl -s -4 ifconfig.me || true)"
 DNS_IP="$(getent ahostsv4 "$DOMAIN" | awk '{print $1; exit}' || true)"
 if [ -n "$DNS_IP" ] && [ "$DNS_IP" = "$SERVER_IP" ]; then
-  certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
+  if [ -n "$EMAIL" ]; then
+    certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
+  else
+    certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect
+  fi
 else
   echo "!! DNS $DOMAIN ($DNS_IP) belum mengarah ke server ini ($SERVER_IP)."
-  echo "   Buat A record dulu, lalu jalankan: sudo certbot --nginx -d $DOMAIN -m $EMAIL --agree-tos --redirect"
+  echo "   Buat A record dulu, lalu jalankan: sudo certbot --nginx -d $DOMAIN --agree-tos --redirect"
 fi
 
 echo "==> [9/9] Cron (scheduler) dan backup harian"

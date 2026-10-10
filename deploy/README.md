@@ -29,11 +29,11 @@ ssh root@IP-VPS
 cd /root/deploy
 sudo DOMAIN=api-ammar.pranalatech.com \
      REPO_URL=git@github.com:USER/ammar-be-laravel.git \
-     EMAIL=kamu@email.com \
+     EMAIL=kamu@email.com \      # opsional
      SEED=1 \
      bash server-setup.sh
 ```
-Yang dikerjakan: update sistem, Nginx + PHP 8.3-FPM + MySQL + Certbot, user `deploy`, firewall (22/80/443),
+Yang dikerjakan: update sistem, Nginx + PHP 8.4-FPM + MySQL + Certbot, user `deploy`, firewall (22/80/443),
 fail2ban, swap (kalau RAM < 2 GB), database + user MySQL khusus (password acak di `/root/.ammar-db-password`),
 clone repo, `.env` produksi, `migrate`, seeder (kalau `SEED=1`), konfigurasi Nginx/FPM (termasuk SSE),
 HTTPS, cron scheduler, dan backup harian.
@@ -45,7 +45,7 @@ HTTPS, cron scheduler, dan backup harian.
 ```bash
 ssh deploy@IP-VPS
 nano /var/www/ammar-be/.env         # isi TRIPAY_*, FONNTE_TOKEN; cek FIREBASE_PROJECT_ID
-cd /var/www/ammar-be && php artisan config:cache && sudo systemctl reload php8.3-fpm
+cd /var/www/ammar-be && php artisan config:cache && sudo systemctl reload php8.4-fpm
 ```
 
 ## 3. Pasang shortcut di Mac
@@ -88,5 +88,5 @@ Ini mematikan login password dan login root lewat SSH.
 - **Backup**: `/var/backups/ammar/*.sql.gz` (7 hari terakhir), jalan jam 02:00. Salin berkala ke tempat lain
   (mis. `scp` ke Mac) karena backup di server yang sama tidak menyelamatkan kalau server hilang.
 - **Update**: setelah `git push`, cukup `./deploy/vps.sh deploy`.
-- **Rollback cepat**: di server `cd /var/www/ammar-be && git checkout <commit-lama> && composer install --no-dev -o && php artisan config:cache && sudo systemctl reload php8.3-fpm`
+- **Rollback cepat**: di server `cd /var/www/ammar-be && git checkout <commit-lama> && composer install --no-dev -o && php artisan config:cache && sudo systemctl reload php8.4-fpm`
   (migrasi yang sudah jalan tidak otomatis di-rollback).
