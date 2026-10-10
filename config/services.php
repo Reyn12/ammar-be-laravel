@@ -18,6 +18,17 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    // Payment gateway Tripay. Sandbox: https://tripay.co.id/api-sandbox
+    'tripay' => [
+        'base_url' => env('TRIPAY_BASE_URL', 'https://tripay.co.id/api-sandbox'),
+        'merchant_code' => env('TRIPAY_MERCHANT_CODE'),
+        'api_key' => env('TRIPAY_API_KEY'),
+        'private_key' => env('TRIPAY_PRIVATE_KEY'),
+        'payment_method' => env('TRIPAY_PAYMENT_METHOD', 'QRIS'),
+        'expiry_minutes' => (int) env('TRIPAY_EXPIRY_MINUTES', 15),
+        'return_url' => env('TRIPAY_RETURN_URL'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

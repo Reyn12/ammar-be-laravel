@@ -223,17 +223,26 @@ Table batches {
 Table payments {
   id bigint [pk, increment]
   order_id bigint [not null, ref: > orders.id]
-  midtrans_order_id varchar [not null]
-  transaction_id varchar
-  payment_type varchar [note: 'qris, gopay, bank_transfer, dll']
-  qr_url text [note: 'QR dari payment gateway']
-  gross_amount int [not null]
-  transaction_status varchar [not null, default: 'pending', note: 'pending | settlement | expire | deny']
+  merchant_ref varchar [not null, unique, note: 'Referensi merchant ke Tripay = orders.code']
+  reference varchar [note: 'Kode referensi transaksi dari Tripay (mis. T123...)']
+  method varchar [note: 'Kode channel Tripay, mis. QRIS']
+  qr_url text [note: 'Gambar QR dari Tripay']
+  qr_string text [note: 'String QRIS mentah']
+  checkout_url text [note: 'Halaman bayar Tripay (cadangan)']
+  amount int [not null, note: 'Nominal tagihan (Rupiah)']
+  fee_amount int [not null, default: 0, note: 'Biaya channel']
+  amount_received int [note: 'Nominal yang diterima merchant']
+  status varchar [not null, default: 'unpaid', note: 'unpaid | paid | expired | failed | refund']
   paid_at timestamp
   expires_at timestamp
+  callback_payload json [note: 'Payload callback Tripay terakhir (untuk audit)']
   created_at timestamp
 
-  Note: 'Hanya untuk pembayaran online (QRIS). Tunai dicatat di orders.'
+  indexes {
+    reference
+  }
+
+  Note: 'Pembayaran online lewat Tripay (QRIS). Pembayaran tunai dicatat di orders (cash_received, confirmed_by).'
 }
 
 Table notifications {

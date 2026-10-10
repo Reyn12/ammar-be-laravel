@@ -8,14 +8,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'order_id',
-    'midtrans_order_id',
-    'transaction_id',
-    'payment_type',
+    'merchant_ref',
+    'reference',
+    'method',
     'qr_url',
-    'gross_amount',
-    'transaction_status',
+    'qr_string',
+    'checkout_url',
+    'amount',
+    'fee_amount',
+    'amount_received',
+    'status',
     'paid_at',
     'expires_at',
+    'callback_payload',
 ])]
 class Payment extends Model
 {
@@ -27,6 +32,7 @@ class Payment extends Model
             'paid_at' => 'datetime',
             'expires_at' => 'datetime',
             'created_at' => 'datetime',
+            'callback_payload' => 'array',
         ];
     }
 
