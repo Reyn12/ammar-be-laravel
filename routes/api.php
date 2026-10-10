@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\MenuController;
@@ -10,6 +11,17 @@ use App\Http\Controllers\Api\V1\TripayCallbackController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
+    // Staf (owner, kasir, koki) - aplikasi Flutter
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login');
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('me', [AuthController::class, 'me'])->name('me');
+            Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+            Route::post('change-password', [AuthController::class, 'changePassword'])->name('change-password');
+        });
+    });
+
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('dummy', [ProductController::class, 'dummy'])->name('dummy');
     });
