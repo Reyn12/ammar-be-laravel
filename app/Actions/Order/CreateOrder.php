@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductAddon;
 use App\Models\Shift;
+use App\Models\StaffEvent;
 use App\Models\Table;
 use App\Services\Tripay\TripayClient;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class CreateOrder
         $tax = (int) round($subtotal * $this->taxPercent($branch) / 100);
         $isQris = $data['payment_method'] === 'qris';
 
-        return DB::transaction(function () use ($data, $branch, $table, $lines, $subtotal, $tax, $isQris) {
+        $order = DB::transaction(function () use ($data, $branch, $table, $lines, $subtotal, $tax, $isQris) {
             $order = Order::create([
                 'branch_id' => $branch->id,
                 'table_id' => $table?->id,
@@ -80,6 +81,11 @@ class CreateOrder
 
             return $order->load(['table', 'payment', 'items.addons']);
         });
+
+        // Pesanan tunai langsung muncul di daftar "menunggu konfirmasi" kasir.
+        StaffEvent::emit(StaffEvent::ORDER_CREATED, $order);
+
+        return $order;
     }
 
     private function resolveTable(Branch $branch, array $data): ?Table

@@ -1,0 +1,5 @@
+# Salin menjadi deploy/vps.conf (file itu sudah di-.gitignore) lalu isi.
+VPS_HOST=203.0.113.5
+VPS_USER=deploy
+VPS_PORT=22
+DOMAIN=api-ammar.pranalatech.com

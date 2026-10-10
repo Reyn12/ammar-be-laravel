@@ -2,16 +2,21 @@
 
 namespace App\Actions\Order;
 
+use App\Actions\Kitchen\AssignOrderToBatches;
 use App\Actions\Notification\SendOrderReceipt;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Models\StaffEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ConfirmCashPayment
 {
-    public function __construct(private readonly SendOrderReceipt $sendReceipt) {}
+    public function __construct(
+        private readonly SendOrderReceipt $sendReceipt,
+        private readonly AssignOrderToBatches $assignBatches,
+    ) {}
 
     /**
      * Kasir mengonfirmasi uang tunai sudah diterima (SKPL-F-006).
@@ -55,9 +60,12 @@ class ConfirmCashPayment
                 'shift_id' => $shift->id,
             ]);
 
+            $this->assignBatches->handle($order);
+
             return $order;
         });
 
+        StaffEvent::emit(StaffEvent::ORDER_PAID, $order);
         $this->sendReceipt->handle($order);
 
         return $order->load(['table', 'items.product.category', 'items.addons']);

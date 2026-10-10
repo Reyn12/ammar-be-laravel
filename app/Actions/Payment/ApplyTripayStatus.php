@@ -2,8 +2,10 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\Kitchen\AssignOrderToBatches;
 use App\Actions\Notification\SendOrderReceipt;
 use App\Models\Payment;
+use App\Models\StaffEvent;
 use Illuminate\Support\Facades\DB;
 
 class ApplyTripayStatus
@@ -17,7 +19,10 @@ class ApplyTripayStatus
         'REFUND' => 'refund',
     ];
 
-    public function __construct(private readonly SendOrderReceipt $sendReceipt) {}
+    public function __construct(
+        private readonly SendOrderReceipt $sendReceipt,
+        private readonly AssignOrderToBatches $assignBatches,
+    ) {}
 
     /**
      * Terapkan status dari Tripay (callback atau cek manual) ke payment dan order.
@@ -45,6 +50,7 @@ class ApplyTripayStatus
 
             if ($status === 'paid') {
                 $order->update(['payment_status' => 'paid', 'paid_at' => now()]);
+                $this->assignBatches->handle($order);
             } elseif (in_array($status, ['expired', 'failed'], true)) {
                 $order->update(['payment_status' => 'expired', 'status' => 'cancelled']);
             }
@@ -52,9 +58,12 @@ class ApplyTripayStatus
             return $payment->refresh();
         });
 
-        // Struk WhatsApp dikirim setelah transaksi database selesai.
+        // Notifikasi dan struk dikirim setelah transaksi database selesai.
         if ($status === 'paid') {
+            StaffEvent::emit(StaffEvent::ORDER_PAID, $updated->order);
             $this->sendReceipt->handle($updated->order);
+        } elseif (in_array($status, ['expired', 'failed'], true)) {
+            StaffEvent::emit(StaffEvent::ORDER_CANCELLED, $updated->order);
         }
 
         return $updated;

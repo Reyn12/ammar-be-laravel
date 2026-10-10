@@ -3,6 +3,7 @@
 namespace App\Actions\Order;
 
 use App\Models\Order;
+use App\Models\StaffEvent;
 
 class ExpireUnpaidOrder
 {
@@ -19,6 +20,7 @@ class ExpireUnpaidOrder
         if ($isOverdue) {
             $order->update(['payment_status' => 'expired', 'status' => 'cancelled']);
             $order->payment?->update(['status' => 'expired']);
+            StaffEvent::emit(StaffEvent::ORDER_CANCELLED, $order);
         }
 
         return $order;

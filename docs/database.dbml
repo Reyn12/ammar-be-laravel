@@ -211,9 +211,9 @@ Table batches {
   id bigint [pk, increment]
   branch_id bigint [not null, ref: > branches.id]
   product_id bigint [not null, ref: > products.id]
-  status varchar [not null, default: 'open', note: 'open | full | cooking | done']
-  total_qty int [not null, default: 0]
-  order_count int [not null, default: 0, note: 'Maks 6 nota per batch']
+  status varchar [not null, default: 'open', note: 'open (menerima nota baru) | full (6 nota pending) | cooking (semua diproses) | done (semua disajikan)']
+  total_qty int [not null, default: 0, note: 'Total porsi yang masih pending']
+  order_count int [not null, default: 0, note: 'Jumlah nota pending, maks 6 per batch']
   created_at timestamp
 }
 
@@ -256,4 +256,23 @@ Table notifications {
   retry_count int [not null, default: 0]
   sent_at timestamp
   created_at timestamp
+}
+
+// ---------------------------------------------------------------
+// Realtime (SSE kasir & dapur)
+// ---------------------------------------------------------------
+
+Table staff_events {
+  id bigint [pk, increment, note: 'Dipakai sebagai Last-Event-ID untuk sambung ulang SSE']
+  branch_id bigint [not null, ref: > branches.id]
+  type varchar [not null, note: 'order.created | order.paid | order.cancelled | kitchen.updated']
+  order_id bigint [ref: > orders.id]
+  data json [note: 'Ringkasan event (kode, meja, nama, status)']
+  created_at timestamp
+
+  indexes {
+    (branch_id, id)
+  }
+
+  Note: 'Antrean event untuk SSE. Dibersihkan berkala (staff-events:prune).'
 }

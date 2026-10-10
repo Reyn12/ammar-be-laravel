@@ -6,8 +6,10 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\Staff\KitchenController;
 use App\Http\Controllers\Api\V1\Staff\ShiftController;
 use App\Http\Controllers\Api\V1\Staff\StaffOrderController;
+use App\Http\Controllers\Api\V1\Staff\StreamController;
 use App\Http\Controllers\Api\V1\TableController;
 use App\Http\Controllers\Api\V1\TripayCallbackController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +41,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('orders/{order}', [StaffOrderController::class, 'show'])->whereNumber('order')->name('staff.orders.show');
         Route::post('orders/{order}/confirm-cash', [StaffOrderController::class, 'confirmCash'])->whereNumber('order')->name('staff.orders.confirm-cash');
     });
+
+    // Dapur (koki & owner)
+    Route::middleware(['auth:sanctum', 'role:kitchen,owner'])->prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('orders', [KitchenController::class, 'orders'])->name('orders');
+        Route::get('batches', [KitchenController::class, 'batches'])->name('batches');
+        Route::post('batches/{batch}/process', [KitchenController::class, 'processBatch'])->whereNumber('batch')->name('batches.process');
+    });
+    Route::patch('order-items/{orderItem}/status', [KitchenController::class, 'updateItemStatus'])
+        ->middleware(['auth:sanctum', 'role:kitchen,owner'])->whereNumber('orderItem')->name('order-items.status');
+
+    // Realtime (SSE) untuk semua staf
+    Route::get('stream/orders', [StreamController::class, 'orders'])
+        ->middleware(['auth:sanctum', 'role:cashier,kitchen,owner'])->name('stream.orders');
 
     Route::prefix('shifts')->name('shifts.')->middleware('auth:sanctum')->group(function () {
         Route::middleware('role:cashier')->group(function () {

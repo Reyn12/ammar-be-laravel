@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('notifications:retry-failed')->everyFiveMinutes();
+Schedule::command('staff-events:prune')->hourly();
