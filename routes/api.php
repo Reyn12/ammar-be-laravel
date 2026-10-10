@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\Staff\DeviceTokenController;
 use App\Http\Controllers\Api\V1\Staff\KitchenController;
 use App\Http\Controllers\Api\V1\Staff\ShiftController;
 use App\Http\Controllers\Api\V1\Staff\StaffOrderController;
@@ -82,6 +83,13 @@ Route::prefix('v1')->name('v1.')->group(function () {
     // Realtime (SSE) untuk semua staf
     Route::get('stream/orders', [StreamController::class, 'orders'])
         ->middleware(['auth:sanctum', 'role:cashier,kitchen,owner'])->name('stream.orders');
+
+    // Token FCM perangkat untuk push notifikasi pesanan masuk
+    Route::middleware(['auth:sanctum', 'role:cashier,kitchen,owner'])->prefix('devices')->name('devices.')->group(function () {
+        Route::post('/', [DeviceTokenController::class, 'store'])->name('store');
+        Route::delete('/', [DeviceTokenController::class, 'destroy'])->name('destroy');
+        Route::post('test', [DeviceTokenController::class, 'test'])->middleware('throttle:6,1')->name('test');
+    });
 
     Route::prefix('shifts')->name('shifts.')->middleware('auth:sanctum')->group(function () {
         Route::middleware('role:cashier')->group(function () {

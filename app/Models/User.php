@@ -32,6 +32,11 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class);

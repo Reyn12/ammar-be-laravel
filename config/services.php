@@ -29,9 +29,13 @@ return [
         'return_url' => env('TRIPAY_RETURN_URL'),
     ],
 
-    // Firebase Authentication (login Google customer). Cukup project id untuk verifikasi token.
+    // Firebase: project id untuk verifikasi login Google customer; credentials (path file service account JSON)
+    // untuk push notifikasi FCM ke tablet kasir/dapur. Channel & suara harus sama dengan yang dibuat app Flutter.
     'firebase' => [
         'project_id' => env('FIREBASE_PROJECT_ID'),
+        'credentials' => env('FIREBASE_CREDENTIALS'),
+        'android_channel' => 'order_masuk',
+        'android_sound' => 'notif_order_masuk',
     ],
 
     // WhatsApp gateway Fonnte (kirim struk pesanan ke customer).

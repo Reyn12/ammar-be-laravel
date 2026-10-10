@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\SendStaffPush;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +40,7 @@ class StaffEvent extends Model
         // Model::$table (nama tabel), bukan relasi table().
         $tableNumber = $order->getRelation('table')?->table_number;
 
-        return static::create([
+        $event = static::create([
             'branch_id' => $order->branch_id,
             'type' => $type,
             'order_id' => $order->id,
@@ -53,6 +54,10 @@ class StaffEvent extends Model
                 'status' => $order->status,
             ],
         ]);
+
+        SendStaffPush::dispatchAfterResponse($event);
+
+        return $event;
     }
 
     public function order(): BelongsTo
