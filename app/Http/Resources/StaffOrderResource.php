@@ -55,7 +55,12 @@ class StaffOrderResource extends JsonResource
                     'product_name' => $component->product_name,
                     'qty' => $component->qty,
                     'status' => $component->status,
-                    'addons' => $component->addons->pluck('name')->values(),
+                    'notes' => $component->notes,
+                    'addons' => $component->addons->map(fn (OrderItemAddon $addon) => [
+                        'id' => $addon->id,
+                        'name' => $addon->name,
+                        'price' => $addon->price,
+                    ])->values(),
                 ])->values(),
                 'addons' => $item->addons->map(fn (OrderItemAddon $addon) => [
                     'id' => $addon->id,

@@ -134,5 +134,6 @@ test('staff order resource lists the package once with its components', function
         ->assertSuccessful()
         ->assertJsonCount(1, 'data.0.items')
         ->assertJsonPath('data.0.items.0.product_name', 'Paket Hemat 3')
-        ->assertJsonPath('data.0.items.0.components.0.addons.0', 'Goreng');
+        ->assertJsonPath('data.0.items.0.components.0.addons.0.name', 'Goreng')
+        ->assertJsonPath('data.0.items.0.components.0.notes', 'jangan pedas');
 });
