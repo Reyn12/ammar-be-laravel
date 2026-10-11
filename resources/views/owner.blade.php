@@ -172,7 +172,7 @@
                             <img :src="p.image_url" x-show="p.image_url" class="h-12 w-12 rounded-xl object-cover bg-stone-100" alt="" onerror="this.style.display='none'">
                             <div class="flex-1 min-w-0">
                                 <p class="font-medium truncate" x-text="p.name"></p>
-                                <p class="text-xs text-stone-400"><span x-text="p.category_name"></span> · <span x-text="rp(p.price)"></span><span x-show="(p.addon_groups || []).length" x-text="' · ' + p.addon_groups.length + ' grup pilihan'"></span></p>
+                                <p class="text-xs text-stone-400"><span x-text="p.category_name"></span> · <span x-text="rp(p.price)"></span><span x-show="(p.addon_groups || []).length" x-text="' · ' + p.addon_groups.length + ' grup pilihan'"></span><span x-show="(p.components || []).length" class="text-amber-700" x-text="' · paket (' + p.components.length + ' isi)'"></span><span x-show="(p.components || []).some(c => !c.is_available)" class="text-red-600"> · ada isi yang habis</span></p>
                             </div>
                             <button @click="toggleProduct(p)" class="relative h-6 w-11 rounded-full transition shrink-0" :class="p.is_available ? 'bg-emerald-500' : 'bg-stone-300'" :title="p.is_available ? 'Tersedia' : 'Habis'">
                                 <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" :class="p.is_available ? 'left-5' : 'left-0.5'"></span>
@@ -342,6 +342,39 @@
                 <label class="flex items-center gap-2 text-sm"><input type="checkbox" x-model="pm.is_available" class="rounded"> Tersedia (matikan kalau sedang habis)</label>
 
                 <div class="border-t border-stone-100 pt-4 space-y-3">
+                    <div><h4 class="font-semibold text-sm">Isi paket</h4>
+                        <p class="text-xs text-stone-400">Kosongkan kalau ini menu biasa. Kalau diisi, dapur menerima tiap isi sebagai item sendiri (dan bisa digabung dengan pesanan lain).</p></div>
+
+                    <template x-for="(c, ci) in pm.components" :key="c.component_id">
+                        <div class="rounded-xl border border-stone-200 p-2.5 bg-stone-50/50 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="flex-1 min-w-0 text-sm font-medium truncate" x-text="c.name"></span>
+                                <span class="text-xs text-stone-400" x-text="rp(c.price)"></span>
+                                <input x-model.number="c.qty" type="number" min="1" max="99" class="w-14 rounded-lg border border-stone-300 px-2 py-1 text-sm bg-white" title="Jumlah">
+                                <button type="button" @click="pm.components.splice(ci, 1)" class="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50" title="Hapus isi">✕</button>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
+                                <label class="flex items-center gap-1" title="Pilihan (mis. bakar/goreng) dan catatan pelanggan diteruskan ke item ini"><input type="checkbox" x-model="c.receives_options" class="rounded"> Terima pilihan &amp; catatan paket</label>
+                                <button type="button" x-show="optionsOf(c).length" @click="takeOptions(c)" class="text-amber-700 hover:underline">Ambil pilihan dari menu ini</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="relative">
+                        <input x-model="compSearch" placeholder="+ Cari menu untuk ditambahkan ke paket…" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <div x-show="compSearch.trim()" class="mt-1 rounded-xl border border-stone-200 bg-white shadow-sm max-h-48 overflow-y-auto divide-y divide-stone-100">
+                            <template x-for="o in componentCandidates" :key="o.id">
+                                <button type="button" @click="addComponent(o)" class="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-amber-50">
+                                    <span class="truncate" x-text="o.name"></span><span class="text-xs text-stone-400 shrink-0" x-text="o.category_name + ' · ' + rp(o.price)"></span>
+                                </button>
+                            </template>
+                            <p x-show="!componentCandidates.length" class="px-3 py-2 text-xs text-stone-400">Tidak ada menu yang cocok (paket lain tidak bisa dijadikan isi).</p>
+                        </div>
+                    </div>
+                    <p x-show="pm.components.length" class="text-xs" :class="packageSaving < 0 ? 'text-red-600' : 'text-stone-500'" x-text="packageHint"></p>
+                </div>
+
+                <div class="border-t border-stone-100 pt-4 space-y-3">
                     <div class="flex items-center justify-between gap-2">
                         <div><h4 class="font-semibold text-sm">Pilihan menu</h4>
                             <p class="text-xs text-stone-400">Mis. Level Es, Level Gula, Tambahan. Kosongkan kalau menunya tanpa pilihan.</p></div>
@@ -407,7 +440,7 @@ function ownerApp() {
             {id: 'paid', label: 'Berjalan'}, {id: 'completed', label: 'Selesai'},
         ],
         orders: [], tables: [], staff: [], products: [], shifts: [], categories: [],
-        catFilter: 'all', catModal: false, newCategory: '', catError: '', pm: null, pmError: '',
+        compSearch: '', catFilter: 'all', catModal: false, newCategory: '', catError: '', pm: null, pmError: '',
         search: '', orderFilter: 'all',
         modal: null, modalError: '', qr: null,
         toastMsg: '', toastErr: false, _t: null,
@@ -599,16 +632,45 @@ function ownerApp() {
             }));
         },
         openProduct(p = null) {
-            this.pmError = '';
+            this.pmError = ''; this.compSearch = '';
             this.pm = p ? {
                 id: p.id, name: p.name, price: p.price, category_id: p.category_id, is_available: p.is_available,
                 preview: p.image_url, file: null,
+                components: (p.components || []).map(c => ({component_id: c.component_id, name: c.name, price: c.price, qty: c.qty, receives_options: c.receives_options})),
                 // grup & pilihan yang sudah ada membawa id supaya riwayat pesanan tetap nyambung
                 groups: p.addon_groups.map(g => ({
                     id: g.id, name: g.name, kind: g.type === 'variant' ? 'variant' : 'addon',
                     addons: g.addons.map(a => ({id: a.id, name: a.name, price: a.price, is_available: a.is_available})),
                 })),
-            } : {id: null, name: '', price: '', category_id: this.catFilter === 'all' ? (this.categories[0]?.id ?? '') : this.catFilter, is_available: true, preview: null, file: null, groups: []};
+            } : {id: null, name: '', price: '', category_id: this.catFilter === 'all' ? (this.categories[0]?.id ?? '') : this.catFilter, is_available: true, preview: null, file: null, groups: [], components: []};
+        },
+        get componentCandidates() {
+            const q = this.compSearch.trim().toLowerCase();
+            const used = new Set(this.pm.components.map(c => c.component_id));
+            return this.products
+                .filter(o => o.id !== this.pm.id && !used.has(o.id) && !(o.components || []).length && o.name.toLowerCase().includes(q))
+                .slice(0, 12);
+        },
+        addComponent(o) {
+            this.pm.components.push({component_id: o.id, name: o.name, price: o.price, qty: 1, receives_options: false});
+            this.compSearch = '';
+        },
+        optionsOf(c) { return this.products.find(p => p.id === c.component_id)?.addon_groups || []; },
+        takeOptions(c) {
+            const have = new Set(this.pm.groups.map(g => g.name.trim().toLowerCase()));
+            const fresh = this.cloneGroups(this.optionsOf(c)).filter(g => !have.has(g.name.trim().toLowerCase()));
+            this.pm.groups.push(...fresh);
+            c.receives_options = true;
+            this.toast(fresh.length ? `${fresh.length} grup pilihan diambil dari ${c.name}` : 'Grup pilihannya sudah ada di paket ini');
+        },
+        get packageSaving() {
+            const total = this.pm.components.reduce((n, c) => n + (c.price || 0) * Math.max(1, Number(c.qty) || 1), 0);
+            return total - (Number(this.pm.price) || 0);
+        },
+        get packageHint() {
+            const total = this.pm.components.reduce((n, c) => n + (c.price || 0) * Math.max(1, Number(c.qty) || 1), 0);
+            const saving = this.packageSaving;
+            return `Harga satuan semua isi ${this.rp(total)}. ` + (saving >= 0 ? `Dengan harga paket ini pelanggan hemat ${this.rp(saving)}.` : `Harga paket ${this.rp(-saving)} lebih mahal dari beli satuan.`);
         },
         pickPhoto(event) {
             const file = event.target.files[0];
@@ -641,6 +703,7 @@ function ownerApp() {
             try {
                 const payload = {
                     category_id: pm.category_id, name: pm.name.trim(), price: Math.round(Number(pm.price) || 0), is_available: pm.is_available,
+                    components: pm.components.map(c => ({component_id: c.component_id, qty: Math.max(1, Math.round(Number(c.qty) || 1)), receives_options: !!c.receives_options})),
                     addon_groups: pm.groups.map(g => {
                         const addons = g.addons.filter(a => a.name.trim()).map(a => ({
                             ...(a.id ? {id: a.id} : {}), name: a.name.trim(), price: Math.round(Number(a.price) || 0), is_available: a.is_available,

@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class StaffProductController extends Controller
 {
@@ -59,6 +60,14 @@ class StaffProductController extends Controller
     public function destroy(Request $request, Product $product): JsonResponse
     {
         $this->ensureSameBranch($request, $product);
+
+        $packages = $product->usedInPackages()->with('product')->get()->pluck('product.name')->filter();
+
+        if ($packages->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'product' => "{$product->name} masih jadi isi paket {$packages->implode(', ')}. Ubah paketnya dulu.",
+            ]);
+        }
 
         $product->delete();
 

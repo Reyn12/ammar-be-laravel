@@ -5,7 +5,9 @@ namespace App\Actions\Product;
 use App\Models\Product;
 use App\Models\ProductAddon;
 use App\Models\ProductAddonGroup;
+use App\Models\ProductComponent;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -39,8 +41,34 @@ class SaveProduct
                 $this->syncGroups($product, $data['addon_groups']);
             }
 
-            return $product->load(['category', 'addonGroups.addons']);
+            if (array_key_exists('components', $data)) {
+                $this->syncComponents($product, $data['components']);
+            }
+
+            return $product->load(['category', 'addonGroups.addons', 'components.component']);
         });
+    }
+
+    /**
+     * Isi paket diganti sesuai daftar yang dikirim. Pesanan lama tidak terpengaruh karena
+     * isi paketnya sudah disalin ke item pesanan saat dibuat.
+     *
+     * @param  array<int, array<string, mixed>>  $components
+     */
+    private function syncComponents(Product $product, array $components): void
+    {
+        $keptIds = [];
+
+        foreach ($components as $component) {
+            ProductComponent::updateOrCreate(
+                ['product_id' => $product->id, 'component_id' => $component['component_id']],
+                ['qty' => (int) ($component['qty'] ?? 1), 'receives_options' => (bool) ($component['receives_options'] ?? false)],
+            );
+
+            $keptIds[] = $component['component_id'];
+        }
+
+        $product->components()->whereNotIn('component_id', $keptIds)->delete();
     }
 
     /**
@@ -111,7 +139,7 @@ class SaveProduct
     /**
      * Id yang dikirim harus milik produk/grup ini, supaya produk lain tidak bisa diutak-atik.
      *
-     * @param  \Illuminate\Support\Collection<int, ProductAddonGroup|ProductAddon>  $existing
+     * @param  Collection<int, ProductAddonGroup|ProductAddon>  $existing
      */
     private function findOwned($existing, mixed $id, string $label): ProductAddonGroup|ProductAddon|null
     {

@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Staff;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
@@ -32,6 +32,12 @@ class SaveProductRequest extends FormRequest
             // URL penuh atau path relatif hasil upload; path lokal perangkat ditolak (lihat withValidator)
             'image_url' => ['sometimes', 'nullable', 'string', 'max:500'],
 
+            // Isi paket. Kalau dikirim, daftarnya dianggap lengkap; array kosong = bukan paket.
+            'components' => ['sometimes', 'array', 'max:20'],
+            'components.*.component_id' => ['required', 'integer', 'distinct'],
+            'components.*.qty' => ['sometimes', 'integer', 'min:1', 'max:99'],
+            'components.*.receives_options' => ['sometimes', 'boolean'],
+
             'addon_groups' => ['sometimes', 'array', 'max:20'],
             'addon_groups.*.id' => ['nullable', 'integer'],
             'addon_groups.*.name' => ['required', 'string', 'max:100'],
@@ -49,6 +55,8 @@ class SaveProductRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->validateComponents($validator);
+
             $image = $this->input('image_url');
 
             // Foto yang baru dipilih dari galeri harus diunggah dulu lewat /uploads/product-image.
@@ -69,5 +77,49 @@ class SaveProductRequest extends FormRequest
                 }
             }
         });
+    }
+
+    /**
+     * Isi paket harus menu biasa milik cabang yang sama (bukan paket lain, bukan dirinya sendiri),
+     * dan menu yang sudah jadi isi paket lain tidak boleh menjadi paket.
+     */
+    private function validateComponents(Validator $validator): void
+    {
+        $components = (array) $this->input('components', []);
+
+        if ($components === []) {
+            return;
+        }
+
+        $product = $this->route('product');
+        $branchId = $this->user()->branch_id;
+
+        if ($product instanceof Product && $product->usedInPackages()->whereHas('product')->exists()) {
+            $validator->errors()->add('components', "{$product->name} sudah menjadi isi paket lain, jadi tidak bisa dijadikan paket.");
+        }
+
+        $found = Product::query()
+            ->where('branch_id', $branchId)
+            ->whereIn('id', collect($components)->pluck('component_id')->filter()->all())
+            ->withCount('components')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($components as $index => $component) {
+            $id = $component['component_id'] ?? null;
+            $menu = $found->get($id);
+
+            $error = match (true) {
+                $id === null => null,
+                ! $menu => 'Menu isi paket tidak ditemukan.',
+                $product instanceof Product && $product->id === $menu->id => 'Paket tidak bisa berisi dirinya sendiri.',
+                $menu->components_count > 0 => "{$menu->name} adalah paket, tidak bisa jadi isi paket lain.",
+                default => null,
+            };
+
+            if ($error) {
+                $validator->errors()->add("components.$index.component_id", $error);
+            }
+        }
     }
 }

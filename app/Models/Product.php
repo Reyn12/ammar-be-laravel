@@ -42,6 +42,12 @@ class Product extends Model
         return $this->hasMany(ProductAddonGroup::class);
     }
 
+    /** Paket-paket yang memakai produk ini sebagai isi. */
+    public function usedInPackages(): HasMany
+    {
+        return $this->hasMany(ProductComponent::class, 'component_id');
+    }
+
     /** Isi paket (kosong untuk produk biasa). */
     public function components(): HasMany
     {
