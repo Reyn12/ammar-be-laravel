@@ -59,6 +59,7 @@ class StaffOrderResource extends JsonResource
                     'addons' => $component->addons->map(fn (OrderItemAddon $addon) => [
                         'id' => $addon->id,
                         'name' => $addon->name,
+                        'group_name' => $addon->addon?->group?->name,
                         'price' => $addon->price,
                     ])->values(),
                 ])->values(),
@@ -67,6 +68,8 @@ class StaffOrderResource extends JsonResource
                     'order_item_id' => $addon->order_item_id,
                     'addon_id' => $addon->addon_id,
                     'name' => $addon->name,
+                    // Nama grup (Level Es, Level Gula, ...) supaya "Normal" tidak ambigu.
+                    'group_name' => $addon->addon?->group?->name,
                     'price' => $addon->price,
                 ])->values(),
             ])->values(),

@@ -68,7 +68,7 @@ class ConfirmCashPayment
         StaffEvent::emit(StaffEvent::ORDER_PAID, $order);
         $this->sendReceipt->handle($order);
 
-        return $order->load(['table', 'items.product.category', 'items.addons']);
+        return $order->load(['table', 'items.product.category', 'items.addons.addon.group']);
     }
 
     private function fail(string $message): never

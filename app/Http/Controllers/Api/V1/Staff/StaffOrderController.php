@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 class StaffOrderController extends Controller
 {
-    private const WITH = ['table', 'items.product.category', 'items.addons'];
+    private const WITH = ['table', 'items.product.category', 'items.addons.addon.group'];
 
     /**
      * Daftar pesanan cabang. Filter ?status= (boleh beberapa, pisahkan koma):

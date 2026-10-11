@@ -19,7 +19,7 @@ class KitchenController extends Controller
     /** Pesanan lunas yang masih dikerjakan dapur (belum semua item disajikan). */
     public function orders(Request $request): JsonResponse
     {
-        $orders = Order::with(['table', 'items.product.category', 'items.addons'])
+        $orders = Order::with(['table', 'items.product.category', 'items.addons.addon.group'])
             ->where('branch_id', $request->user()->branch_id)
             ->where('payment_status', 'paid')
             ->whereIn('status', ['pending', 'cooking'])
