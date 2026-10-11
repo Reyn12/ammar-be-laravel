@@ -22,7 +22,7 @@ class GetBranchMenu
             ->whereHas('products', fn ($products) => $this->scope($products, $branch, $search))
             ->with(['products' => function ($products) use ($branch, $search) {
                 $this->scope($products, $branch, $search)
-                    ->with('addonGroups.addons')
+                    ->with(['addonGroups.addons', 'components.component'])
                     ->orderBy('id');
             }])
             ->orderBy('id')

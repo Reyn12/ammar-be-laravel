@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 
 class StaffProductController extends Controller
 {
-    private const WITH = ['category', 'addonGroups.addons'];
+    private const WITH = ['category', 'addonGroups.addons', 'components.component'];
 
     /** Seluruh produk cabang, termasuk yang sedang habis (yang diarsipkan tidak ikut). */
     public function index(Request $request): JsonResponse

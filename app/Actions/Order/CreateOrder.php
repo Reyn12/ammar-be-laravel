@@ -5,12 +5,15 @@ namespace App\Actions\Order;
 use App\Models\Branch;
 use App\Models\Config;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductAddon;
 use App\Models\Shift;
 use App\Models\StaffEvent;
 use App\Models\Table;
 use App\Services\Tripay\TripayClient;
+use App\Services\Tripay\TripayException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -24,7 +27,7 @@ class CreateOrder
      * @param  array<string, mixed>  $data  hasil validasi StoreOrderRequest
      *
      * @throws ValidationException
-     * @throws \App\Services\Tripay\TripayException
+     * @throws TripayException
      */
     public function handle(array $data): Order
     {
@@ -71,6 +74,8 @@ class CreateOrder
                         'price' => $addon->price,
                     ]);
                 }
+
+                $this->createComponentItems($order, $item, $line);
             }
 
             $order->load('items.addons');
@@ -110,11 +115,11 @@ class CreateOrder
 
     /**
      * @param  array<int, array<string, mixed>>  $items
-     * @return array<int, array{product: Product, qty: int, notes: ?string, addons: \Illuminate\Support\Collection<int, ProductAddon>, lineTotal: int}>
+     * @return array<int, array{product: Product, qty: int, notes: ?string, addons: Collection<int, ProductAddon>, lineTotal: int}>
      */
     private function buildLines(Branch $branch, array $items): array
     {
-        $products = Product::with('addonGroups.addons')
+        $products = Product::with(['addonGroups.addons', 'components.component'])
             ->where('branch_id', $branch->id)
             ->whereIn('id', collect($items)->pluck('product_id')->unique())
             ->get()
@@ -137,6 +142,8 @@ class CreateOrder
                 ]);
             }
 
+            $this->ensureComponentsAvailable($product, $index);
+
             $addons = $this->resolveAddons($product, $item['addon_ids'] ?? [], $index);
 
             $unitPrice = $product->price + $addons->sum('price');
@@ -153,11 +160,58 @@ class CreateOrder
         return $lines;
     }
 
+    /** Paket tidak bisa dipesan kalau salah satu isinya habis atau sudah diarsipkan. */
+    private function ensureComponentsAvailable(Product $product, int $index): void
+    {
+        foreach ($product->components as $component) {
+            if (! $component->component?->is_available) {
+                $name = $component->component?->name ?? 'salah satu isi paket';
+
+                throw ValidationException::withMessages([
+                    "items.$index.product_id" => "{$product->name} belum bisa dipesan, {$name} sedang habis.",
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Paket dipecah jadi item dapur per komponen (harga 0, harganya sudah di item paket).
+     * Pilihan paket dan catatan customer ikut ke komponen yang menandai receives_options.
+     *
+     * @param  array{product: Product, qty: int, notes: ?string, addons: Collection<int, ProductAddon>}  $line
+     */
+    private function createComponentItems(Order $order, OrderItem $parent, array $line): void
+    {
+        foreach ($line['product']->components as $component) {
+            $child = $order->items()->create([
+                'parent_item_id' => $parent->id,
+                'product_id' => $component->component_id,
+                'product_name' => $component->component->name,
+                'qty' => $component->qty * $line['qty'],
+                'price' => 0,
+                'notes' => $component->receives_options ? $line['notes'] : null,
+                'status' => 'pending',
+            ]);
+
+            if (! $component->receives_options) {
+                continue;
+            }
+
+            foreach ($line['addons'] as $addon) {
+                $child->addons()->create([
+                    'addon_id' => $addon->id,
+                    'name' => $addon->name,
+                    'price' => 0,
+                ]);
+            }
+        }
+    }
+
     /**
      * Pastikan addon milik produk, tersedia, dan jumlah pilihan per grup sesuai aturan.
      *
      * @param  array<int, int>  $addonIds
-     * @return \Illuminate\Support\Collection<int, ProductAddon>
+     * @return Collection<int, ProductAddon>
      */
     private function resolveAddons(Product $product, array $addonIds, int $index)
     {

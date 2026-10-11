@@ -33,6 +33,10 @@ class UpdateItemStatus
             return $item; // sudah di status itu, anggap berhasil
         }
 
+        if ($item->children()->exists()) {
+            return $this->advanceBundle($item, $status);
+        }
+
         if (self::FLOW[$status] !== self::FLOW[$item->status] + 1) {
             $this->fail("Status tidak bisa diubah dari {$item->status} ke {$status}.");
         }
@@ -43,6 +47,30 @@ class UpdateItemStatus
             if ($item->batch) {
                 $this->refreshBatch->handle($item->batch);
             }
+
+            $this->syncOrderStatus->handle($order);
+        });
+
+        StaffEvent::emit(StaffEvent::KITCHEN_UPDATED, $order->refresh());
+
+        return $item->refresh();
+    }
+
+    /** Item paket: semua komponen yang belum sampai ke status itu ikut dimajukan. */
+    private function advanceBundle(OrderItem $item, string $status): OrderItem
+    {
+        $order = $item->order;
+
+        DB::transaction(function () use ($item, $status, $order) {
+            $item->children()->with('batch')->get()
+                ->filter(fn (OrderItem $child) => self::FLOW[$child->status] < self::FLOW[$status])
+                ->each(function (OrderItem $child) use ($status) {
+                    $child->update(['status' => $status]);
+
+                    if ($child->batch) {
+                        $this->refreshBatch->handle($child->batch);
+                    }
+                });
 
             $this->syncOrderStatus->handle($order);
         });

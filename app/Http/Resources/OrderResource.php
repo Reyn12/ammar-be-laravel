@@ -34,11 +34,15 @@ class OrderResource extends JsonResource
             'paid_at' => $this->paid_at,
             'expires_at' => $this->expires_at,
             'created_at' => $this->created_at,
-            'items' => $this->items->map(fn (OrderItem $item) => [
+            'items' => $this->items->whereNull('parent_item_id')->map(fn (OrderItem $item) => [
                 'product_name' => $item->product_name,
                 'qty' => $item->qty,
                 'price' => $item->price,
                 'notes' => $item->notes,
+                'components' => $this->items->where('parent_item_id', $item->id)->map(fn (OrderItem $component) => [
+                    'product_name' => $component->product_name,
+                    'qty' => $component->qty,
+                ])->values(),
                 'addons' => $item->addons->map(fn (OrderItemAddon $addon) => [
                     'name' => $addon->name,
                     'price' => $addon->price,

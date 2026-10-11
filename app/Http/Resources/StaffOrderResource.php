@@ -38,7 +38,8 @@ class StaffOrderResource extends JsonResource
             'cash_received' => $this->cash_received,
             'paid_at' => $this->paid_at,
             'created_at' => $this->created_at,
-            'items' => $this->items->map(fn (OrderItem $item) => [
+            // Komponen paket tidak jadi baris sendiri; mereka muncul di "components" item paketnya.
+            'items' => $this->items->whereNull('parent_item_id')->map(fn (OrderItem $item) => [
                 'id' => $item->id,
                 'order_id' => $item->order_id,
                 'product_id' => $item->product_id,
@@ -48,6 +49,14 @@ class StaffOrderResource extends JsonResource
                 'price' => $item->price,
                 'status' => $item->status,
                 'notes' => $item->notes,
+                'components' => $this->items->where('parent_item_id', $item->id)->map(fn (OrderItem $component) => [
+                    'id' => $component->id,
+                    'product_id' => $component->product_id,
+                    'product_name' => $component->product_name,
+                    'qty' => $component->qty,
+                    'status' => $component->status,
+                    'addons' => $component->addons->pluck('name')->values(),
+                ])->values(),
                 'addons' => $item->addons->map(fn (OrderItemAddon $addon) => [
                     'id' => $addon->id,
                     'order_item_id' => $addon->order_item_id,

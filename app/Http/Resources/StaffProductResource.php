@@ -29,6 +29,10 @@ class StaffProductResource extends JsonResource
             'name' => $this->name,
             'price' => $this->price,
             'is_available' => $this->is_available,
+            'components' => $this->whenLoaded('components', fn () => $this->components->map(fn ($component) => [
+                'name' => $component->component?->name,
+                'qty' => $component->qty,
+            ])->values()),
             'addon_groups' => $this->addonGroups->map(fn (ProductAddonGroup $group) => [
                 'id' => $group->id,
                 'product_id' => $group->product_id,

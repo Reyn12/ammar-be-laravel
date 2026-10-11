@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['branch_id', 'category_id', 'image_url', 'name', 'price', 'is_available'])]
 class Product extends Model
@@ -39,5 +39,11 @@ class Product extends Model
     public function addonGroups(): HasMany
     {
         return $this->hasMany(ProductAddonGroup::class);
+    }
+
+    /** Isi paket (kosong untuk produk biasa). */
+    public function components(): HasMany
+    {
+        return $this->hasMany(ProductComponent::class)->orderBy('id');
     }
 }

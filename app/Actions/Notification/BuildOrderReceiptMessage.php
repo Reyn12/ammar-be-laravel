@@ -23,11 +23,17 @@ class BuildOrderReceiptMessage
             'Pesanan:',
         ];
 
-        foreach ($order->items as $item) {
+        foreach ($order->items->whereNull('parent_item_id') as $item) {
             $options = $item->addons->pluck('name')->all();
             $unitPrice = $item->price + $item->addons->sum('price');
 
             $lines[] = "• {$item->qty}x {$item->product_name}".($options ? ' ('.implode(', ', $options).')' : '');
+
+            $components = $order->items->where('parent_item_id', $item->id)->pluck('product_name')->all();
+
+            if ($components) {
+                $lines[] = '   Isi: '.implode(', ', $components);
+            }
 
             if (filled($item->notes)) {
                 $lines[] = "   Catatan: {$item->notes}";

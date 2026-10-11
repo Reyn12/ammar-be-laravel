@@ -15,14 +15,19 @@ class AssignOrderToBatches
      * dalam satu batch agar dapur memasaknya sekaligus. Satu batch memuat maksimal
      * Batch::MAX_NOTES nota; kalau penuh, dibuatkan batch baru.
      *
-     * Dipanggil sekali saat pesanan lunas. Item yang sudah punya batch dilewati.
+     * Dipanggil sekali saat pesanan lunas. Item yang sudah punya batch dilewati,
+     * begitu juga item paket (induk) karena komponennya yang masuk batch.
      */
     public function handle(Order $order): void
     {
         $order->loadMissing('items');
 
+        // Item paket (induk) tidak dimasak sendiri; yang di-batch adalah komponennya.
+        $parentIds = $order->items->pluck('parent_item_id')->filter()->unique();
+
         $order->items
             ->whereNull('batch_id')
+            ->reject(fn ($item) => $parentIds->contains($item->id))
             ->groupBy('product_id')
             ->each(function ($items, $productId) use ($order) {
                 DB::transaction(function () use ($items, $productId, $order) {

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'order_id',
+    'parent_item_id',
     'product_id',
     'batch_id',
     'product_name',
@@ -25,6 +26,18 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /** Item paket yang memuat komponen ini (null untuk item biasa). */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_item_id');
+    }
+
+    /** Komponen paket yang dipecah dari item ini. */
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_item_id');
     }
 
     public function batch(): BelongsTo

@@ -23,6 +23,11 @@ class MenuProductResource extends JsonResource
             'price' => $this->price,
             'is_available' => $this->is_available,
             'addon_groups' => AddonGroupResource::collection($this->whenLoaded('addonGroups')),
+            // Isi paket (kosong untuk menu biasa)
+            'components' => $this->whenLoaded('components', fn () => $this->components->map(fn ($component) => [
+                'name' => $component->component?->name,
+                'qty' => $component->qty,
+            ])->values()),
         ];
     }
 }

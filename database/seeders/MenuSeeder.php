@@ -5,14 +5,58 @@ namespace Database\Seeders;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductComponent;
 use Illuminate\Database\Seeder;
 
 class MenuSeeder extends Seeder
 {
-    /** Satu gambar dulu untuk semua produk (file ada di public/images). */
+    /** Satu gambar dulu untuk semua produk baru (file ada di public/images). */
     private const PLACEHOLDER_IMAGE = 'images/menu-placeholder.png';
 
     private const PLAIN_DRINKS = ['air mineral', 'teh botol', 'es batu kristal'];
+
+    private const PACKAGE_CATEGORY = 'Menu Paket';
+
+    /** Nama paket lama => nama baru (nama tidak lagi memuat harga). Id produk tetap. */
+    private const RENAMED = [
+        'Paket 24K (Tanpa Minuman)' => 'Paket Hemat 1',
+        'Paket 26K (Air Mineral)' => 'Paket Hemat 2',
+        'Paket 27K (Es Teh Manis)' => 'Paket Hemat 3',
+        'Paket 28K (Nasi Liwet)' => 'Paket Hemat 4',
+    ];
+
+    /**
+     * Isi paket: [nama komponen, jumlah, ikut menerima pilihan paket (bakar/goreng, catatan)].
+     * Saat dipesan, paket dipecah jadi item dapur per komponen.
+     */
+    private const BUNDLES = [
+        'Paket Hemat 1' => [
+            ['Ayam Bakar / Goreng 1 Potong', 1, true],
+            ['Nasi Putih Porsi', 1, false],
+            ['Lalapan', 1, false],
+            ['Sambal Dadakan', 1, false],
+        ],
+        'Paket Hemat 2' => [
+            ['Ayam Bakar / Goreng 1 Potong', 1, true],
+            ['Nasi Putih Porsi', 1, false],
+            ['Lalapan', 1, false],
+            ['Sambal Dadakan', 1, false],
+            ['Air Mineral', 1, false],
+        ],
+        'Paket Hemat 3' => [
+            ['Ayam Bakar / Goreng 1 Potong', 1, true],
+            ['Nasi Putih Porsi', 1, false],
+            ['Lalapan', 1, false],
+            ['Sambal Dadakan', 1, false],
+            ['Es Teh Manis', 1, false],
+        ],
+        'Paket Hemat 4' => [
+            ['Ayam Bakar / Goreng 1 Potong', 1, true],
+            ['Nasi Liwet Porsi', 1, false],
+            ['Lalapan', 1, false],
+            ['Sambal Dadakan', 1, false],
+        ],
+    ];
 
     public function run(): void
     {
@@ -21,25 +65,48 @@ class MenuSeeder extends Seeder
         /** @var array<string, array<string, int>> $menu */
         $menu = require database_path('seeders/data/menu.php');
 
+        foreach (self::RENAMED as $oldName => $newName) {
+            Product::where('branch_id', $branch->id)->where('name', $oldName)->update(['name' => $newName]);
+        }
+
         foreach ($menu as $categoryName => $products) {
             $category = Category::firstOrCreate(['name' => $categoryName]);
 
             foreach ($products as $name => $price) {
-                $product = Product::firstOrCreate(
-                    ['branch_id' => $branch->id, 'name' => $name],
-                    [
-                        'category_id' => $category->id,
-                        'price' => $price,
-                        'image_url' => self::PLACEHOLDER_IMAGE,
-                        'is_available' => true,
-                    ],
-                );
+                // Kategori dan harga mengikuti data seeder; foto dan ketersediaan tidak ditimpa.
+                $product = Product::firstOrNew(['branch_id' => $branch->id, 'name' => $name], [
+                    'image_url' => self::PLACEHOLDER_IMAGE,
+                    'is_available' => true,
+                ]);
+                $product->fill(['category_id' => $category->id, 'price' => $price])->save();
 
                 // Grup variant/addon hanya dibuat saat produk baru, supaya seeder aman diulang.
                 if ($product->wasRecentlyCreated) {
                     $this->seedOptions($product, $categoryName);
                 }
+
+                if ($categoryName === self::PACKAGE_CATEGORY) {
+                    $this->seedPackage($product, $branch);
+                }
             }
+        }
+    }
+
+    /** Pilihan ayam untuk paket dan isi paketnya. Aman dijalankan ulang. */
+    private function seedPackage(Product $package, Branch $branch): void
+    {
+        if (! $package->addonGroups()->where('name', 'Tipe Ayam')->exists()) {
+            $this->variant($package, 'Tipe Ayam', ['Bakar' => 0, 'Goreng' => 0]);
+            $this->variant($package, 'Level Pedas', ['Lv 0' => 0, 'Lv 1' => 2000, 'Lv 2' => 3000]);
+        }
+
+        foreach (self::BUNDLES[$package->name] ?? [] as [$componentName, $qty, $receivesOptions]) {
+            $component = Product::where('branch_id', $branch->id)->where('name', $componentName)->firstOrFail();
+
+            ProductComponent::updateOrCreate(
+                ['product_id' => $package->id, 'component_id' => $component->id],
+                ['qty' => $qty, 'receives_options' => $receivesOptions],
+            );
         }
     }
 
