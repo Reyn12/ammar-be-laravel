@@ -114,7 +114,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::post('/', [OrderController::class, 'store'])->middleware('customer.auth:optional')->name('store');
-        Route::get('{code}', [OrderController::class, 'show'])->where('code', 'AMR-[0-9]{8}-[0-9]+')->name('show');
+        Route::get('{code}', [OrderController::class, 'show'])->where('code', '(?:A[0-9]{6}|AMR-[0-9]{8})-[0-9]+')->name('show');
     });
 
     Route::middleware('customer.auth')->prefix('me')->name('me.')->group(function () {

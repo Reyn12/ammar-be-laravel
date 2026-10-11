@@ -52,17 +52,17 @@ beforeEach(function () {
 
     $this->payload = function (array $override = []) {
         $payload = array_replace_recursive([
-        'branch_id' => $this->branch->id,
-        'order_type' => 'dine_in',
-        'table_token' => $this->table->qr_token,
-        'payment_method' => 'cash',
-        'customer' => ['name' => 'Budi', 'phone' => '0812-3456-7890', 'email' => null],
-        'items' => [[
-            'product_id' => $this->ayam->id,
-            'qty' => 2,
-            'notes' => 'jangan pedas',
-            'addon_ids' => [$this->lv2->id, $this->sambal->id],
-        ]],
+            'branch_id' => $this->branch->id,
+            'order_type' => 'dine_in',
+            'table_token' => $this->table->qr_token,
+            'payment_method' => 'cash',
+            'customer' => ['name' => 'Budi', 'phone' => '0812-3456-7890', 'email' => null],
+            'items' => [[
+                'product_id' => $this->ayam->id,
+                'qty' => 2,
+                'notes' => 'jangan pedas',
+                'addon_ids' => [$this->lv2->id, $this->sambal->id],
+            ]],
         ], $override);
 
         // daftar item diganti utuh, bukan digabung per elemen
@@ -88,7 +88,7 @@ test('cash order is created with server side prices', function () {
         ->assertJsonMissingPath('data.customer_phone');
 
     $order = Order::first();
-    expect($order->code)->toStartWith('AMR-')
+    expect($order->code)->toMatch('/^A\d{6}-001$/')
         ->and($order->customer_phone)->toBe('081234567890')
         ->and($order->expires_at)->toBeNull();
 });

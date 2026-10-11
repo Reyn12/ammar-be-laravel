@@ -23,6 +23,8 @@ class StaffOrderResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            // 3 angka belakang kode, dipanggil dapur lewat mic
+            'queue_number' => $this->queueNumber(),
             'shift_id' => $this->shift_id,
             'table_id' => $this->table_id,
             'table_number' => $this->table ? (string) $this->table->table_number : null,

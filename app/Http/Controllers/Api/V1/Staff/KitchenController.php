@@ -58,6 +58,7 @@ class KitchenController extends Controller
                 return [
                     'order_id' => $order->id,
                     'order_code' => $order->code,
+                    'queue_number' => $order->queueNumber(),
                     'table_label' => $order->order_type === 'takeaway' ? 'Takeaway' : 'Meja '.($order->table?->table_number ?? '-'),
                     'qty' => (int) $items->sum('qty'),
                 ];

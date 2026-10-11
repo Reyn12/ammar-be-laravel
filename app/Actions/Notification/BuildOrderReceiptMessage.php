@@ -15,6 +15,7 @@ class BuildOrderReceiptMessage
             '',
             "*{$order->branch->name}*",
             "Kode pesanan: *{$order->code}*",
+            "Nomor antrean: *{$order->queueNumber()}*",
             'Tipe: '.($order->order_type === 'dine_in'
                 ? 'Makan di Tempat'.($order->table ? " · Meja {$order->table->table_number}" : '')
                 : 'Bawa Pulang'),

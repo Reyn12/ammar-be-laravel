@@ -40,17 +40,40 @@ class Order extends Model
         });
     }
 
-    /** Format AMR-YYYYMMDD-NNN, urutan reset tiap hari. */
+    /**
+     * Format A{YYMMDD}-{NNN}, mis. A261011-021. Urutan reset tiap hari dan 3 angka belakangnya
+     * adalah nomor antrean yang dipanggil dapur. Kode format lama (AMR-YYYYMMDD-NNN) di hari yang
+     * sama ikut dihitung supaya nomor antrean tidak ganda.
+     */
     public static function generateCode(): string
     {
-        $datePart = now()->format('Ymd');
-        $sequence = static::where('code', 'like', "AMR-{$datePart}-%")->count() + 1;
+        $today = now();
+        $prefix = 'A'.$today->format('ymd').'-';
+
+        $lastSequence = static::where('code', 'like', $prefix.'%')
+            ->orWhere('code', 'like', 'AMR-'.$today->format('Ymd').'-%')
+            ->pluck('code')
+            ->map(fn (string $code) => (int) static::queueNumberOf($code))
+            ->max() ?? 0;
+
+        $sequence = $lastSequence + 1;
 
         do {
-            $code = sprintf('AMR-%s-%03d', $datePart, $sequence++);
+            $code = sprintf('%s%03d', $prefix, $sequence++);
         } while (static::where('code', $code)->exists());
 
         return $code;
+    }
+
+    /** Nomor antrean = urutan di belakang kode ("A261011-021" -> "021"). */
+    public static function queueNumberOf(?string $code): string
+    {
+        return $code === null ? '' : substr($code, (int) strrpos($code, '-') + 1);
+    }
+
+    public function queueNumber(): string
+    {
+        return static::queueNumberOf($this->code);
     }
 
     protected function casts(): array

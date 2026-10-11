@@ -13,6 +13,7 @@ use App\Models\StaffEvent;
 use App\Models\Table;
 use App\Services\Tripay\TripayClient;
 use App\Services\Tripay\TripayException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +41,8 @@ class CreateOrder
         $isQris = $data['payment_method'] === 'qris';
 
         $order = DB::transaction(function () use ($data, $branch, $table, $lines, $subtotal, $tax, $isQris) {
-            $order = Order::create([
+            // Dua pesanan yang masuk bersamaan bisa mendapat nomor urut sama; yang kedua mengulang.
+            $order = retry(3, fn () => Order::create([
                 'branch_id' => $branch->id,
                 'table_id' => $table?->id,
                 'customer_id' => $data['customer_id'] ?? null,
@@ -55,7 +57,7 @@ class CreateOrder
                 'total_amount' => $subtotal + $tax,
                 'tax_amount' => $tax,
                 'expires_at' => $isQris ? now()->addMinutes((int) config('services.tripay.expiry_minutes')) : null,
-            ]);
+            ]), 0, fn (\Throwable $e) => $e instanceof UniqueConstraintViolationException);
 
             foreach ($lines as $line) {
                 $item = $order->items()->create([

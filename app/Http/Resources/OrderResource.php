@@ -24,6 +24,7 @@ class OrderResource extends JsonResource
 
         return [
             'code' => $this->code,
+            'queue_number' => $this->queueNumber(),
             'order_type' => $this->order_type,
             'status' => $this->status,
             'table_number' => $this->table?->table_number,

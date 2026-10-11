@@ -47,6 +47,7 @@ class StaffEvent extends Model
             'data' => [
                 'order_id' => $order->id,
                 'code' => $order->code,
+                'queue_number' => $order->queueNumber(),
                 'place_label' => $order->order_type === 'takeaway' ? 'Takeaway' : 'Meja '.($tableNumber ?? '-'),
                 'customer_name' => $order->customer_name,
                 'payment_method' => $order->payment_method,
