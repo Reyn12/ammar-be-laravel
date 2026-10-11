@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\Staff\DeviceTokenController;
 use App\Http\Controllers\Api\V1\Staff\KitchenController;
 use App\Http\Controllers\Api\V1\Staff\ShiftController;
+use App\Http\Controllers\Api\V1\Staff\StaffCategoryController;
 use App\Http\Controllers\Api\V1\Staff\StaffOrderController;
 use App\Http\Controllers\Api\V1\Staff\StaffProductController;
 use App\Http\Controllers\Api\V1\Staff\StaffTableController;
@@ -57,12 +58,16 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('uploads/product-image', [UploadController::class, 'productImage'])->name('staff.uploads.product-image');
     });
 
-    // Owner: akun staf dan meja
+    // Owner: akun staf, kategori menu, dan meja
     Route::middleware(['auth:sanctum', 'role:owner'])->group(function () {
         Route::get('users', [StaffUserController::class, 'index'])->name('staff.users.index');
         Route::post('users', [StaffUserController::class, 'store'])->name('staff.users.store');
         Route::put('users/{user}', [StaffUserController::class, 'update'])->whereNumber('user')->name('staff.users.update');
         Route::delete('users/{user}', [StaffUserController::class, 'destroy'])->whereNumber('user')->name('staff.users.destroy');
+
+        Route::post('categories', [StaffCategoryController::class, 'store'])->name('staff.categories.store');
+        Route::put('categories/{category}', [StaffCategoryController::class, 'update'])->whereNumber('category')->name('staff.categories.update');
+        Route::delete('categories/{category}', [StaffCategoryController::class, 'destroy'])->whereNumber('category')->name('staff.categories.destroy');
 
         Route::get('tables', [StaffTableController::class, 'index'])->name('staff.tables.index');
         Route::post('tables', [StaffTableController::class, 'store'])->name('staff.tables.store');

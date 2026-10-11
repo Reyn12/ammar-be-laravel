@@ -232,3 +232,21 @@ test('menu management is limited to cashier and owner of the same branch', funct
     $this->getJson(route('v1.staff.products.index'))->assertForbidden();
     $this->putJson(route('v1.staff.products.update', $product), ['name' => 'x'])->assertForbidden();
 });
+
+test('a plain drink without options can gain options later when edited', function () {
+    $water = Product::factory()->create(['branch_id' => $this->branch->id, 'category_id' => $this->category->id, 'name' => 'Air Mineral']);
+    expect($water->addonGroups()->count())->toBe(0);
+
+    $this->putJson(route('v1.staff.products.update', $water), [
+        'addon_groups' => [[
+            'name' => 'Penyajian', 'is_required' => true, 'min_qty' => 1, 'max_qty' => 1,
+            'addons' => [['name' => 'Dingin', 'price' => 0], ['name' => 'Biasa', 'price' => 0]],
+        ]],
+    ])->assertSuccessful()->assertJsonPath('data.addon_groups.0.type', 'variant');
+
+    expect($water->refresh()->addonGroups()->first()->addons()->count())->toBe(2);
+
+    // Dan bisa dikosongkan lagi: grup diarsipkan, menunya kembali tanpa pilihan.
+    $this->putJson(route('v1.staff.products.update', $water), ['addon_groups' => []])->assertSuccessful();
+    expect($water->addonGroups()->count())->toBe(0);
+});

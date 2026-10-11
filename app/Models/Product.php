@@ -28,7 +28,8 @@ class Product extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        // withTrashed: produk lama tetap tahu nama kategorinya walau kategorinya sudah diarsipkan.
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     public function orderItems(): HasMany

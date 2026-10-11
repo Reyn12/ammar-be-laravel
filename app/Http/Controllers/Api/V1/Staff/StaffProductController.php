@@ -31,9 +31,10 @@ class StaffProductController extends Controller
     public function categories(): JsonResponse
     {
         return ApiResponse::success(
-            Category::orderBy('id')->get(['id', 'name'])->map(fn (Category $category) => [
+            Category::withCount('products')->orderBy('id')->get()->map(fn (Category $category) => [
                 'id' => $category->id,
                 'name' => $category->name,
+                'product_count' => $category->products_count,
             ])->values(),
         );
     }

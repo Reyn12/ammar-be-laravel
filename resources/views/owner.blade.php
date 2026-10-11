@@ -152,22 +152,32 @@
 
             {{-- MENU --}}
             <section x-show="tab === 'menu'" class="space-y-4">
-                <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold">Menu</h2>
-                    <input x-model="search" placeholder="Cari menu…" class="rounded-xl border border-stone-300 px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold">Menu <span class="text-stone-400 font-normal text-sm" x-text="'(' + products.length + ')'"></span></h2>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input x-model="search" placeholder="Cari menu…" class="rounded-xl border border-stone-300 px-3 py-2 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <button @click="catModal = true; catError = ''" class="px-3.5 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-sm">Kelola kategori</button>
+                        <button @click="openProduct()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">+ Tambah menu</button>
+                    </div>
                 </div>
-                <p class="text-xs text-stone-400">Di sini bisa atur ketersediaan & hapus. Tambah/ubah detail menu (foto, varian) tetap lewat aplikasi.</p>
+                <div class="flex gap-2 overflow-x-auto pb-1">
+                    <button @click="catFilter = 'all'" class="px-3.5 py-1.5 rounded-full text-sm border whitespace-nowrap transition" :class="catFilter === 'all' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-stone-200 hover:bg-stone-50'">Semua</button>
+                    <template x-for="c in categories" :key="c.id">
+                        <button @click="catFilter = c.id" class="px-3.5 py-1.5 rounded-full text-sm border whitespace-nowrap transition" :class="catFilter === c.id ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-stone-200 hover:bg-stone-50'" x-text="c.name + ' (' + c.product_count + ')'"></button>
+                    </template>
+                </div>
                 <div class="bg-white rounded-2xl border border-stone-200 divide-y divide-stone-100">
                     <template x-for="p in filteredProducts" :key="p.id">
                         <div class="flex items-center gap-3 p-3">
                             <img :src="p.image_url" x-show="p.image_url" class="h-12 w-12 rounded-xl object-cover bg-stone-100" alt="" onerror="this.style.display='none'">
                             <div class="flex-1 min-w-0">
                                 <p class="font-medium truncate" x-text="p.name"></p>
-                                <p class="text-xs text-stone-400"><span x-text="p.category_name"></span> · <span x-text="rp(p.price)"></span></p>
+                                <p class="text-xs text-stone-400"><span x-text="p.category_name"></span> · <span x-text="rp(p.price)"></span><span x-show="(p.addon_groups || []).length" x-text="' · ' + p.addon_groups.length + ' grup pilihan'"></span></p>
                             </div>
                             <button @click="toggleProduct(p)" class="relative h-6 w-11 rounded-full transition shrink-0" :class="p.is_available ? 'bg-emerald-500' : 'bg-stone-300'" :title="p.is_available ? 'Tersedia' : 'Habis'">
                                 <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" :class="p.is_available ? 'left-5' : 'left-0.5'"></span>
                             </button>
+                            <button @click="openProduct(p)" class="text-xs px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200">Ubah</button>
                             <button @click="removeProduct(p)" class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Hapus</button>
                         </div>
                     </template>
@@ -277,6 +287,106 @@
             </div>
         </div>
 
+        {{-- MODAL KATEGORI --}}
+        <div x-show="catModal" x-transition.opacity class="fixed inset-0 z-30 bg-stone-900/40 grid place-items-center p-4" @keydown.escape.window="catModal = false" @click.self="catModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+                <h3 class="font-semibold text-lg">Kelola kategori</h3>
+                <div class="space-y-2">
+                    <template x-for="c in categories" :key="c.id">
+                        <div class="flex items-center gap-2">
+                            <input :value="c.name" @change="renameCategory(c, $event.target.value)" class="flex-1 min-w-0 rounded-xl border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <span class="text-xs text-stone-400 w-16 text-right" x-text="c.product_count + ' menu'"></span>
+                            <button @click="removeCategory(c)" class="text-xs px-2.5 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Hapus</button>
+                        </div>
+                    </template>
+                    <p x-show="!categories.length" class="text-sm text-stone-400">Belum ada kategori.</p>
+                </div>
+                <form @submit.prevent="addCategory" class="flex gap-2 pt-1">
+                    <input x-model="newCategory" placeholder="Nama kategori baru" class="flex-1 min-w-0 rounded-xl border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <button class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">Tambah</button>
+                </form>
+                <p x-show="catError" x-text="catError" class="text-sm text-red-600"></p>
+                <p class="text-xs text-stone-400">Ubah nama langsung di kolomnya (tersimpan saat kamu pindah dari kolom). Kategori yang masih punya menu tidak bisa dihapus.</p>
+                <div class="flex justify-end"><button @click="catModal = false" class="px-4 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-sm">Tutup</button></div>
+            </div>
+        </div>
+
+        {{-- MODAL MENU --}}
+        <div x-show="pm" x-transition.opacity class="fixed inset-0 z-30 bg-stone-900/40 grid place-items-center p-4" @keydown.escape.window="pm = null" @click.self="pm = null">
+            <template x-if="pm">
+            <form @submit.prevent="saveProduct" class="bg-white rounded-2xl w-full max-w-xl p-6 space-y-4 shadow-xl max-h-[92vh] overflow-y-auto">
+                <h3 class="font-semibold text-lg" x-text="pm?.id ? 'Ubah menu' : 'Tambah menu'"></h3>
+
+                <div class="flex items-center gap-3">
+                    <div class="h-20 w-20 rounded-2xl bg-stone-100 overflow-hidden grid place-items-center text-xs text-stone-400 shrink-0">
+                        <img x-show="pm?.preview" :src="pm?.preview" class="h-full w-full object-cover" alt="">
+                        <span x-show="!pm?.preview">Foto</span>
+                    </div>
+                    <div class="text-sm">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" @change="pickPhoto($event)" class="text-xs">
+                        <p class="text-xs text-stone-400 mt-1">JPG/PNG/WebP, maks 2 MB. Disarankan 1200×1032.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2"><label class="text-xs text-stone-500">Nama menu</label>
+                        <input x-model="pm.name" required minlength="2" class="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"></div>
+                    <div><label class="text-xs text-stone-500">Harga (Rp)</label>
+                        <input x-model.number="pm.price" type="number" min="0" required class="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"></div>
+                    <div><label class="text-xs text-stone-500">Kategori</label>
+                        <select x-model.number="pm.category_id" required class="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm bg-white">
+                            <option value="" disabled>Pilih…</option>
+                            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+                        </select></div>
+                </div>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" x-model="pm.is_available" class="rounded"> Tersedia (matikan kalau sedang habis)</label>
+
+                <div class="border-t border-stone-100 pt-4 space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div><h4 class="font-semibold text-sm">Pilihan menu</h4>
+                            <p class="text-xs text-stone-400">Mis. Level Es, Level Gula, Tambahan. Kosongkan kalau menunya tanpa pilihan.</p></div>
+                    </div>
+
+                    <template x-for="(g, gi) in pm.groups" :key="gi">
+                        <div class="rounded-xl border border-stone-200 p-3 space-y-2 bg-stone-50/50">
+                            <div class="flex gap-2">
+                                <input x-model="g.name" placeholder="Nama grup (mis. Level Es)" class="flex-1 min-w-0 rounded-lg border border-stone-300 px-3 py-1.5 text-sm bg-white">
+                                <select x-model="g.kind" class="rounded-lg border border-stone-300 px-2 py-1.5 text-sm bg-white">
+                                    <option value="variant">Wajib pilih 1</option>
+                                    <option value="addon">Opsional (boleh banyak)</option>
+                                </select>
+                                <button type="button" @click="pm.groups.splice(gi, 1)" class="text-xs px-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Hapus grup">✕</button>
+                            </div>
+                            <template x-for="(a, ai) in g.addons" :key="ai">
+                                <div class="flex items-center gap-2 pl-2">
+                                    <input x-model="a.name" placeholder="Nama pilihan" class="flex-1 min-w-0 rounded-lg border border-stone-300 px-3 py-1.5 text-sm bg-white">
+                                    <input x-model.number="a.price" type="number" min="0" placeholder="+Rp" class="w-24 rounded-lg border border-stone-300 px-2 py-1.5 text-sm bg-white">
+                                    <label class="flex items-center gap-1 text-xs text-stone-500" title="Tersedia"><input type="checkbox" x-model="a.is_available" class="rounded"> ada</label>
+                                    <button type="button" @click="g.addons.splice(ai, 1)" class="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50" title="Hapus pilihan">✕</button>
+                                </div>
+                            </template>
+                            <button type="button" @click="g.addons.push({name: '', price: 0, is_available: true})" class="text-xs text-amber-700 hover:underline pl-2">+ Tambah pilihan</button>
+                        </div>
+                    </template>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" @click="pm.groups.push({name: '', kind: 'variant', addons: [{name: '', price: 0, is_available: true}]})" class="text-sm px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-50">+ Tambah grup pilihan</button>
+                        <select @change="copyOptions($event.target.value); $event.target.value = ''" class="text-sm rounded-lg border border-stone-300 px-2 py-1.5 bg-white">
+                            <option value="">Salin pilihan dari menu lain…</option>
+                            <template x-for="o in products.filter(x => x.id !== pm.id && (x.addon_groups || []).length)" :key="o.id"><option :value="o.id" x-text="o.name"></option></template>
+                        </select>
+                    </div>
+                </div>
+
+                <p x-show="pmError" x-text="pmError" class="text-sm text-red-600"></p>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" @click="pm = null" class="px-4 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-sm">Batal</button>
+                    <button :disabled="busy" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-sm font-medium" x-text="busy ? 'Menyimpan…' : 'Simpan'"></button>
+                </div>
+            </form>
+            </template>
+        </div>
+
         {{-- TOAST --}}
         <div x-show="toastMsg" x-transition class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl text-sm text-white shadow-lg" :class="toastErr ? 'bg-red-600' : 'bg-stone-800'" x-text="toastMsg"></div>
     </div>
@@ -296,7 +406,8 @@ function ownerApp() {
             {id: 'all', label: 'Semua'}, {id: 'pending_cash', label: 'Menunggu tunai'},
             {id: 'paid', label: 'Berjalan'}, {id: 'completed', label: 'Selesai'},
         ],
-        orders: [], tables: [], staff: [], products: [], shifts: [],
+        orders: [], tables: [], staff: [], products: [], shifts: [], categories: [],
+        catFilter: 'all', catModal: false, newCategory: '', catError: '', pm: null, pmError: '',
         search: '', orderFilter: 'all',
         modal: null, modalError: '', qr: null,
         toastMsg: '', toastErr: false, _t: null,
@@ -361,11 +472,11 @@ function ownerApp() {
         async reload() {
             this.loading = true;
             try {
-                const [o, t, s, p, sh] = await Promise.all([
+                const [o, t, s, p, sh, c] = await Promise.all([
                     this.api('orders?limit=500'), this.api('tables'), this.api('users'),
-                    this.api('products'), this.api('shifts'),
+                    this.api('products'), this.api('shifts'), this.api('categories'),
                 ]);
-                this.orders = o.data; this.tables = t.data; this.staff = s.data; this.products = p.data; this.shifts = sh.data;
+                this.orders = o.data; this.tables = t.data; this.staff = s.data; this.products = p.data; this.shifts = sh.data; this.categories = c.data;
             } catch (e) { this.toast(e.message, true); }
             this.loading = false;
         },
@@ -453,7 +564,100 @@ function ownerApp() {
         // ---------- menu ----------
         get filteredProducts() {
             const q = this.search.trim().toLowerCase();
-            return this.products.filter(p => !q || p.name.toLowerCase().includes(q) || (p.category_name || '').toLowerCase().includes(q));
+            return this.products.filter(p => (this.catFilter === 'all' || p.category_id === this.catFilter)
+                && (!q || p.name.toLowerCase().includes(q) || (p.category_name || '').toLowerCase().includes(q)));
+        },
+
+        // ---- kategori ----
+        async addCategory() {
+            const name = this.newCategory.trim();
+            if (!name) return;
+            this.catError = '';
+            try { await this.api('categories', 'POST', {name}); this.newCategory = ''; this.toast('Kategori ditambahkan'); await this.reload(); }
+            catch (e) { this.catError = e.message; }
+        },
+        async renameCategory(c, value) {
+            const name = value.trim();
+            if (!name || name === c.name) return;
+            this.catError = '';
+            try { await this.api(`categories/${c.id}`, 'PUT', {name}); this.toast('Kategori diperbarui'); }
+            catch (e) { this.catError = e.message; }
+            await this.reload();
+        },
+        async removeCategory(c) {
+            if (!confirm(`Hapus kategori "${c.name}"?`)) return;
+            this.catError = '';
+            try { await this.api(`categories/${c.id}`, 'DELETE'); if (this.catFilter === c.id) this.catFilter = 'all'; this.toast('Kategori dihapus'); await this.reload(); }
+            catch (e) { this.catError = e.message; }
+        },
+
+        // ---- tambah / ubah menu ----
+        cloneGroups(groups) {
+            return (groups || []).map(g => ({
+                name: g.name, kind: g.type === 'variant' ? 'variant' : 'addon',
+                addons: g.addons.map(a => ({name: a.name, price: a.price, is_available: a.is_available})),
+            }));
+        },
+        openProduct(p = null) {
+            this.pmError = '';
+            this.pm = p ? {
+                id: p.id, name: p.name, price: p.price, category_id: p.category_id, is_available: p.is_available,
+                preview: p.image_url, file: null,
+                // grup & pilihan yang sudah ada membawa id supaya riwayat pesanan tetap nyambung
+                groups: p.addon_groups.map(g => ({
+                    id: g.id, name: g.name, kind: g.type === 'variant' ? 'variant' : 'addon',
+                    addons: g.addons.map(a => ({id: a.id, name: a.name, price: a.price, is_available: a.is_available})),
+                })),
+            } : {id: null, name: '', price: '', category_id: this.catFilter === 'all' ? (this.categories[0]?.id ?? '') : this.catFilter, is_available: true, preview: null, file: null, groups: []};
+        },
+        pickPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { this.pmError = 'Ukuran foto maksimal 2 MB.'; event.target.value = ''; return; }
+            this.pmError = '';
+            this.pm.file = file;
+            this.pm.preview = URL.createObjectURL(file);
+        },
+        copyOptions(productId) {
+            const source = this.products.find(p => p.id === Number(productId));
+            if (source) this.pm.groups.push(...this.cloneGroups(source.addon_groups));
+        },
+        async uploadPhoto(file) {
+            const body = new FormData();
+            body.append('image', file);
+            const res = await fetch('/api/v1/uploads/product-image', {method: 'POST', headers: {Accept: 'application/json', Authorization: 'Bearer ' + this.token}, body});
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(json.errors?.image?.[0] || json.message || 'Foto gagal diunggah.');
+            return json.data.url;
+        },
+        async saveProduct() {
+            const pm = this.pm;
+            for (const g of pm.groups) {
+                if (!g.name.trim()) { this.pmError = 'Nama grup pilihan wajib diisi.'; return; }
+                const filled = g.addons.filter(a => a.name.trim());
+                if (!filled.length) { this.pmError = `Grup "${g.name}" butuh minimal satu pilihan.`; return; }
+            }
+            this.busy = true; this.pmError = '';
+            try {
+                const payload = {
+                    category_id: pm.category_id, name: pm.name.trim(), price: Math.round(Number(pm.price) || 0), is_available: pm.is_available,
+                    addon_groups: pm.groups.map(g => {
+                        const addons = g.addons.filter(a => a.name.trim()).map(a => ({
+                            ...(a.id ? {id: a.id} : {}), name: a.name.trim(), price: Math.round(Number(a.price) || 0), is_available: a.is_available,
+                        }));
+                        const variant = g.kind === 'variant';
+                        return {...(g.id ? {id: g.id} : {}), name: g.name.trim(), is_required: variant, min_qty: variant ? 1 : 0, max_qty: variant ? 1 : addons.length, addons};
+                    }),
+                };
+                if (pm.file) payload.image_url = await this.uploadPhoto(pm.file);
+                else if (!pm.id) payload.image_url = 'images/menu-placeholder.png';
+
+                await this.api(pm.id ? `products/${pm.id}` : 'products', pm.id ? 'PUT' : 'POST', payload);
+                this.pm = null;
+                this.toast('Menu tersimpan');
+                await this.reload();
+            } catch (e) { this.pmError = e.message; }
+            this.busy = false;
         },
         toggleProduct(p) { return this.act(() => this.api(`products/${p.id}`, 'PUT', {is_available: !p.is_available}), 'Menu diperbarui'); },
         removeProduct(p) {
