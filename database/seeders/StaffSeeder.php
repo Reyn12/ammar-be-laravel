@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 class StaffSeeder extends Seeder
 {
     /**
-     * Akun demo, semua dengan password "password".
+     * Akun demo, semua dengan password "Password123".
      */
     public function run(): void
     {
@@ -29,7 +29,7 @@ class StaffSeeder extends Seeder
                     'branch_id' => $branch->id,
                     'role' => $account['role'],
                     'name' => $account['name'],
-                    'password' => Hash::make('password'),
+                    'password' => Hash::make('Password123'),
                 ],
             );
         }
