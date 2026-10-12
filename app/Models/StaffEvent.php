@@ -18,6 +18,8 @@ class StaffEvent extends Model
 
     public const ORDER_CANCELLED = 'order.cancelled';
 
+    public const ORDER_READY = 'order.ready';
+
     public const KITCHEN_UPDATED = 'kitchen.updated';
 
     protected function casts(): array

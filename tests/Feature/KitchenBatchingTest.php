@@ -185,7 +185,8 @@ test('item status moves forward and the order completes when everything is serve
     expect($order->refresh()->status)->toBe('completed')
         ->and(Batch::where('product_id', $this->ayam->id)->first()->status)->toBe('done');
 
-    expect(StaffEvent::where('type', StaffEvent::KITCHEN_UPDATED)->count())->toBeGreaterThanOrEqual(4);
+    expect(StaffEvent::where('type', StaffEvent::KITCHEN_UPDATED)->count())->toBeGreaterThanOrEqual(4)
+        ->and(StaffEvent::where('type', StaffEvent::ORDER_READY)->count())->toBe(1);
 });
 
 test('kitchen orders only contain active paid orders', function () {

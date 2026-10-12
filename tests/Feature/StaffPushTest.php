@@ -140,6 +140,19 @@ test('paid cash order pushes to kitchen only', function () {
     expect(fcmRecipients())->toBe(['kitchen-tablet']);
 });
 
+test('ready order pushes to cashier and owner only', function () {
+    fakeFirebaseCredentials();
+    fakeFcm();
+    DeviceToken::factory()->create(['user_id' => $this->cashier->id, 'token' => 'cashier-tablet']);
+    DeviceToken::factory()->create(['user_id' => $this->kitchen->id, 'token' => 'kitchen-tablet']);
+    DeviceToken::factory()->create(['user_id' => $this->owner->id, 'token' => 'owner-phone']);
+
+    app(StaffPushNotifier::class)
+        ->notify(emitFor(StaffEvent::ORDER_READY, 'cash', 'paid'));
+
+    expect(fcmRecipients())->toEqualCanonicalizing(['cashier-tablet', 'owner-phone']);
+});
+
 test('events that need no attention send nothing', function () {
     fakeFirebaseCredentials();
     fakeFcm();

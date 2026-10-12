@@ -3,6 +3,7 @@
 namespace App\Actions\Kitchen;
 
 use App\Actions\Order\SyncOrderStatus;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\StaffEvent;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,8 @@ class UpdateItemStatus
             $this->fail("Status tidak bisa diubah dari {$item->status} ke {$status}.");
         }
 
+        $wasCompleted = $order->status === 'completed';
+
         DB::transaction(function () use ($item, $status, $order) {
             $item->update(['status' => $status]);
 
@@ -51,7 +54,7 @@ class UpdateItemStatus
             $this->syncOrderStatus->handle($order);
         });
 
-        StaffEvent::emit(StaffEvent::KITCHEN_UPDATED, $order->refresh());
+        $this->emitEvents($order, $wasCompleted);
 
         return $item->refresh();
     }
@@ -60,6 +63,7 @@ class UpdateItemStatus
     private function advanceBundle(OrderItem $item, string $status): OrderItem
     {
         $order = $item->order;
+        $wasCompleted = $order->status === 'completed';
 
         DB::transaction(function () use ($item, $status, $order) {
             $item->children()->with('batch')->get()
@@ -75,9 +79,21 @@ class UpdateItemStatus
             $this->syncOrderStatus->handle($order);
         });
 
-        StaffEvent::emit(StaffEvent::KITCHEN_UPDATED, $order->refresh());
+        $this->emitEvents($order, $wasCompleted);
 
         return $item->refresh();
+    }
+
+    /** Pesanan yang baru jadi completed memberi tahu kasir bahwa makanan siap diantar. */
+    private function emitEvents(Order $order, bool $wasCompleted): void
+    {
+        $order->refresh();
+
+        StaffEvent::emit(StaffEvent::KITCHEN_UPDATED, $order);
+
+        if (! $wasCompleted && $order->status === 'completed') {
+            StaffEvent::emit(StaffEvent::ORDER_READY, $order);
+        }
     }
 
     private function fail(string $message): never

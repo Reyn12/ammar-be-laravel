@@ -96,6 +96,11 @@ class StaffPushNotifier
                 'title' => 'Pesanan baru sudah dibayar',
                 'body' => $detail,
             ],
+            $event->type === StaffEvent::ORDER_READY => [
+                'roles' => ['cashier', 'owner'],
+                'title' => 'Pesanan siap diantar',
+                'body' => trim('Antrian '.($data['queue_number'] ?? '-').' · '.$detail, ' ·'),
+            ],
             // Tunai lunas setelah kasir konfirmasi: kasir sudah tahu, hanya dapur yang perlu.
             $event->type === StaffEvent::ORDER_PAID => [
                 'roles' => ['kitchen'],
