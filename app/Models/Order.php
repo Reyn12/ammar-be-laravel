@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'cash_received',
     'confirmed_by',
     'paid_at',
+    'handed_over_at',
     'expires_at',
 ])]
 class Order extends Model
@@ -80,6 +81,7 @@ class Order extends Model
     {
         return [
             'paid_at' => 'datetime',
+            'handed_over_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Staff;
 
 use App\Actions\Order\ConfirmCashPayment;
+use App\Actions\Order\HandOverOrder;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StaffOrderResource;
 use App\Models\Order;
@@ -18,6 +19,7 @@ class StaffOrderController extends Controller
      * Daftar pesanan cabang. Filter ?status= (boleh beberapa, pisahkan koma):
      *   paid          pesanan lunas yang masih berjalan (belum selesai)
      *   pending_cash  pesanan tunai yang belum dikonfirmasi kasir
+     *   ready         makanan sudah selesai dimasak tapi belum diserahkan ke pelanggan
      *   completed     pesanan selesai
      * Tambahan: ?shift_id=, ?limit= (maks 500).
      */
@@ -39,6 +41,7 @@ class StaffOrderController extends Controller
                     match ($status) {
                         'paid' => $query->orWhere(fn ($q) => $q->where('payment_status', 'paid')->where('status', '!=', 'completed')),
                         'pending_cash' => $query->orWhere(fn ($q) => $q->where('payment_method', 'cash')->where('payment_status', 'unpaid')->where('status', '!=', 'cancelled')),
+                        'ready' => $query->orWhere(fn ($q) => $q->where('status', 'completed')->whereNull('handed_over_at')),
                         'completed' => $query->orWhere('status', 'completed'),
                         default => null,
                     };
@@ -69,6 +72,15 @@ class StaffOrderController extends Controller
         $confirmed = $action->handle($order, $request->user(), $data['received_amount'] ?? null);
 
         return ApiResponse::success((new StaffOrderResource($confirmed))->resolve(), 'Pembayaran tunai dikonfirmasi.');
+    }
+
+    public function handOver(Request $request, Order $order, HandOverOrder $action): JsonResponse
+    {
+        $this->ensureSameBranch($request, $order);
+
+        $handedOver = $action->handle($order)->load(self::WITH);
+
+        return ApiResponse::success((new StaffOrderResource($handedOver))->resolve(), 'Pesanan diserahkan ke pelanggan.');
     }
 
     private function ensureSameBranch(Request $request, Order $order): void

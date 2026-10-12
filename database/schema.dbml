@@ -121,6 +121,7 @@ Table payments {
   gross_amount int
   transaction_status varchar [note: 'pending, settlement, expire, deny']
   paid_at datetime [null]
+  handed_over_at datetime [null, note: 'waktu makanan diserahkan ke pelanggan']
   created_at datetime
 }
 

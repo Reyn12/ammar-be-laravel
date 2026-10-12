@@ -46,6 +46,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('orders', [StaffOrderController::class, 'index'])->name('staff.orders.index');
         Route::get('orders/{order}', [StaffOrderController::class, 'show'])->whereNumber('order')->name('staff.orders.show');
         Route::post('orders/{order}/confirm-cash', [StaffOrderController::class, 'confirmCash'])->whereNumber('order')->name('staff.orders.confirm-cash');
+        Route::post('orders/{order}/hand-over', [StaffOrderController::class, 'handOver'])->whereNumber('order')->name('staff.orders.hand-over');
     });
 
     // Kelola menu (kasir & owner)

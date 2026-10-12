@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\OrderItemAddon;
 use App\Models\Product;
 use App\Models\Shift;
+use App\Models\StaffEvent;
 use App\Models\Table;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -165,4 +166,51 @@ test('customer order lookup by code still works next to the staff routes', funct
     $order = ($this->makeOrder)();
 
     $this->getJson(route('v1.orders.show', $order->code))->assertSuccessful()->assertJsonPath('data.code', $order->code);
+});
+
+test('ready filter lists completed orders that are not handed over yet', function () {
+    $ready = ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'completed']);
+    ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'completed', 'handed_over_at' => now()]);
+    ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'cooking']);
+    Sanctum::actingAs($this->kasir);
+
+    $this->getJson(route('v1.staff.orders.index', ['status' => 'ready']))
+        ->assertSuccessful()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $ready->id)
+        ->assertJsonPath('data.0.handed_over_at', null);
+});
+
+test('handing over a completed order stamps it once and emits an event', function () {
+    $order = ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'completed']);
+    Sanctum::actingAs($this->kasir);
+
+    $this->postJson(route('v1.staff.orders.hand-over', $order))
+        ->assertSuccessful()
+        ->assertJsonPath('data.handed_over_at', fn ($value) => $value !== null);
+
+    $stamp = $order->refresh()->handed_over_at;
+    $this->postJson(route('v1.staff.orders.hand-over', $order))->assertSuccessful(); // idempoten
+
+    expect($order->refresh()->handed_over_at->equalTo($stamp))->toBeTrue()
+        ->and(StaffEvent::where('type', StaffEvent::ORDER_HANDED_OVER)->count())->toBe(1);
+});
+
+test('an order that is still cooking cannot be handed over', function () {
+    $order = ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'cooking']);
+    Sanctum::actingAs($this->kasir);
+
+    $this->postJson(route('v1.staff.orders.hand-over', $order))->assertUnprocessable();
+
+    expect($order->refresh()->handed_over_at)->toBeNull();
+});
+
+test('hand over is limited to the same branch and to cashier or owner', function () {
+    $order = ($this->makeOrder)(['payment_status' => 'paid', 'status' => 'completed']);
+
+    Sanctum::actingAs($this->koki);
+    $this->postJson(route('v1.staff.orders.hand-over', $order))->assertForbidden();
+
+    Sanctum::actingAs(User::factory()->create(['role' => 'cashier']));
+    $this->postJson(route('v1.staff.orders.hand-over', $order))->assertNotFound();
 });

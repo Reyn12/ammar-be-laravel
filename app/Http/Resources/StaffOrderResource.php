@@ -39,6 +39,7 @@ class StaffOrderResource extends JsonResource
             'tax_amount' => $this->tax_amount,
             'cash_received' => $this->cash_received,
             'paid_at' => $this->paid_at,
+            'handed_over_at' => $this->handed_over_at,
             'created_at' => $this->created_at,
             // Komponen paket tidak jadi baris sendiri; mereka muncul di "components" item paketnya.
             'items' => $this->items->whereNull('parent_item_id')->map(fn (OrderItem $item) => [
