@@ -41,7 +41,7 @@ class KitchenController extends Controller
             'items.order.table',
         ])
             ->where('branch_id', $request->user()->branch_id)
-            ->whereIn('status', ['open', 'full'])
+            ->where('status', 'open')
             ->orderBy('id')
             ->get();
 

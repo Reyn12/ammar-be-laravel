@@ -9,8 +9,7 @@ class RefreshBatch
     /**
      * Hitung ulang batch dari item-itemnya:
      *  - total_qty / order_count = hanya item yang masih menunggu diproses (pending)
-     *  - open    : masih menerima nota baru (kurang dari MAX_NOTES nota pending)
-     *  - full    : sudah MAX_NOTES nota pending
+     *  - open    : masih ada item pending, terus menerima nota baru (tanpa batas jumlah nota)
      *  - cooking : tidak ada yang pending, masih ada yang dimasak
      *  - done    : semua item sudah disajikan
      */
@@ -22,7 +21,6 @@ class RefreshBatch
         $noteCount = $pending->pluck('order_id')->unique()->count();
 
         $status = match (true) {
-            $pending->isNotEmpty() && $noteCount >= Batch::MAX_NOTES => 'full',
             $pending->isNotEmpty() => 'open',
             $items->contains('status', 'cooking') => 'cooking',
             default => 'done',

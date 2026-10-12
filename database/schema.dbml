@@ -106,9 +106,9 @@ Table batches {
   id int [pk, increment]
   branch_id int [ref: > branches.id]
   product_id int [ref: > products.id]
-  status varchar [note: 'open, full, cooking, done']
+  status varchar [note: 'open, cooking, done']
   total_qty int [note: 'total porsi dalam batch']
-  order_count int [note: 'jumlah nota yang gabung, maks 6']
+  order_count int [note: 'jumlah nota yang gabung']
   created_at datetime
 }
 

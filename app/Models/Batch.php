@@ -10,9 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['branch_id', 'product_id', 'status', 'total_qty', 'order_count'])]
 class Batch extends Model
 {
-    /** Maksimal nota (pesanan) dalam satu batch (SKPL-F-010). */
-    public const MAX_NOTES = 6;
-
     public $timestamps = false;
 
     public function branch(): BelongsTo

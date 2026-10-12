@@ -69,18 +69,16 @@ test('two lines of the same product in one order count as a single note', functi
         ->and($batch->total_qty)->toBe(3);
 });
 
-test('a batch holds at most six notes and the seventh order opens a new batch', function () {
-    foreach (range(1, 6) as $i) {
+test('a batch has no note limit and later orders keep joining the same batch', function () {
+    foreach (range(1, 7) as $i) {
         ($this->paidOrder)([[$this->ayam, 1]]);
     }
 
-    $first = Batch::first();
-    expect($first->order_count)->toBe(6)->and($first->status)->toBe('full');
-
-    ($this->paidOrder)([[$this->ayam, 2]]);
-
-    expect(Batch::count())->toBe(2)
-        ->and(Batch::orderBy('id')->get()->pluck('order_count')->all())->toBe([6, 1]);
+    $batch = Batch::first();
+    expect(Batch::count())->toBe(1)
+        ->and($batch->order_count)->toBe(7)
+        ->and($batch->total_qty)->toBe(7)
+        ->and($batch->status)->toBe('open');
 });
 
 test('assigning twice does not duplicate items in batches', function () {
@@ -149,17 +147,17 @@ test('processing selected notes shrinks the batch and a full process removes it'
         ->assertJsonPath('message', 'Tidak ada item yang bisa diproses di batch ini.');
 });
 
-test('a batch that was full accepts a new note after some notes are processed', function () {
-    $orders = collect(range(1, 6))->map(fn () => ($this->paidOrder)([[$this->ayam, 1]]));
+test('processing some notes shrinks the batch and new notes still join it', function () {
+    $orders = collect(range(1, 7))->map(fn () => ($this->paidOrder)([[$this->ayam, 1]]));
     Sanctum::actingAs($this->koki);
 
     $this->postJson(route('v1.kitchen.batches.process', Batch::first()), ['order_ids' => [$orders[0]->id, $orders[1]->id]])->assertSuccessful();
 
-    expect(Batch::first()->status)->toBe('open')->and(Batch::first()->order_count)->toBe(4);
+    expect(Batch::first()->status)->toBe('open')->and(Batch::first()->order_count)->toBe(5);
 
     ($this->paidOrder)([[$this->ayam, 1]]);
 
-    expect(Batch::count())->toBe(1)->and(Batch::first()->order_count)->toBe(5);
+    expect(Batch::count())->toBe(1)->and(Batch::first()->order_count)->toBe(6);
 });
 
 test('item status moves forward and the order completes when everything is served', function () {

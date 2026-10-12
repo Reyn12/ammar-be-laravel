@@ -12,8 +12,9 @@ class AssignOrderToBatches
 
     /**
      * Order Batching (SKPL-F-010): item menu yang sama dari beberapa pesanan dikelompokkan
-     * dalam satu batch agar dapur memasaknya sekaligus. Satu batch memuat maksimal
-     * Batch::MAX_NOTES nota; kalau penuh, dibuatkan batch baru.
+     * dalam satu batch agar dapur memasaknya sekaligus. Tidak ada batas jumlah nota; koki
+     * memilih sendiri nota mana yang diproses. Batch baru dibuat hanya kalau menu itu belum
+     * punya batch open.
      *
      * Dipanggil sekali saat pesanan lunas. Item yang sudah punya batch dilewati,
      * begitu juga item paket (induk) karena komponennya yang masuk batch.
