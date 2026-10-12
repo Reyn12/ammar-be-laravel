@@ -7,11 +7,14 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class MenuSeeder extends Seeder
 {
-    /** Satu gambar dulu untuk semua produk baru (file ada di public/images). */
+    /** Dipakai kalau foto produk belum ada di public/images/menus. */
     private const PLACEHOLDER_IMAGE = 'images/menu-placeholder.png';
+
+    private const MENU_IMAGE_DIR = 'images/menus';
 
     private const PLAIN_DRINKS = ['air mineral', 'teh botol', 'es batu kristal'];
 
@@ -73,12 +76,17 @@ class MenuSeeder extends Seeder
             $category = Category::firstOrCreate(['name' => $categoryName]);
 
             foreach ($products as $name => $price) {
-                // Kategori dan harga mengikuti data seeder; foto dan ketersediaan tidak ditimpa.
+                // Kategori, harga, dan foto bawaan mengikuti data seeder; ketersediaan tidak ditimpa.
                 $product = Product::firstOrNew(['branch_id' => $branch->id, 'name' => $name], [
-                    'image_url' => self::PLACEHOLDER_IMAGE,
                     'is_available' => true,
                 ]);
-                $product->fill(['category_id' => $category->id, 'price' => $price])->save();
+                $product->fill(['category_id' => $category->id, 'price' => $price]);
+
+                if ($this->canReplaceImage($product)) {
+                    $product->image_url = $this->imageFor($name);
+                }
+
+                $product->save();
 
                 // Grup variant/addon hanya dibuat saat produk baru, supaya seeder aman diulang.
                 if ($product->wasRecentlyCreated) {
@@ -90,6 +98,24 @@ class MenuSeeder extends Seeder
                 }
             }
         }
+    }
+
+    /** Foto hasil unggahan staff tidak ditimpa; hanya kosong, placeholder, atau foto bawaan. */
+    private function canReplaceImage(Product $product): bool
+    {
+        $current = $product->image_url;
+
+        return $current === null
+            || $current === self::PLACEHOLDER_IMAGE
+            || str_starts_with($current, self::MENU_IMAGE_DIR.'/');
+    }
+
+    /** Foto menu: public/images/menus/{slug-nama}.jpeg, fallback ke placeholder. */
+    private function imageFor(string $name): string
+    {
+        $path = self::MENU_IMAGE_DIR.'/'.Str::slug($name).'.jpeg';
+
+        return file_exists(public_path($path)) ? $path : self::PLACEHOLDER_IMAGE;
     }
 
     /** Pilihan ayam untuk paket dan isi paketnya. Aman dijalankan ulang. */
