@@ -7,6 +7,7 @@
     <title>Dashboard Owner · Ammar</title>
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>[x-cloak]{display:none!important}</style>
 </head>
@@ -101,7 +102,12 @@
             <section x-show="tab === 'tables'" class="space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold">Meja <span class="text-stone-400 font-normal text-sm" x-text="'(' + tables.length + ')'"></span></h2>
-                    <button @click="open('table', {table_number: nextTableNumber()})" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">+ Tambah meja</button>
+                    <div class="flex gap-2">
+                        <button @click="downloadAllQr()" :disabled="qrZipping || !tables.some(t => t.is_active)" class="px-4 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 disabled:opacity-60 text-sm font-medium">
+                            <span x-text="qrZipping ? 'Menyiapkan…' : 'Unduh semua QR'"></span>
+                        </button>
+                        <button @click="open('table', {table_number: nextTableNumber()})" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">+ Tambah meja</button>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     <template x-for="t in tables" :key="t.id">
@@ -442,7 +448,7 @@ function ownerApp() {
         orders: [], tables: [], staff: [], products: [], shifts: [], categories: [],
         compSearch: '', catFilter: 'all', catModal: false, newCategory: '', catError: '', pm: null, pmError: '',
         search: '', orderFilter: 'all',
-        modal: null, modalError: '', qr: null, qrCard: null,
+        modal: null, modalError: '', qr: null, qrCard: null, qrZipping: false,
         toastMsg: '', toastErr: false, _t: null,
 
         init() {
@@ -677,6 +683,29 @@ function ownerApp() {
             a.href = this.qrCard;
             a.download = `qr-meja-${this.qr.table_number}.png`;
             a.click();
+        },
+        // Semua meja aktif dalam satu ZIP, biar sekali unduh langsung bisa dicetak.
+        async downloadAllQr() {
+            const active = this.tables.filter(t => t.is_active).sort((a, b) => a.table_number - b.table_number);
+            if (!active.length) return;
+            this.qrZipping = true;
+            try {
+                const zip = new JSZip();
+                for (const t of active) {
+                    zip.file(`qr-meja-${t.table_number}.png`, this.buildQrCard(t).split(',')[1], {base64: true});
+                    await new Promise(r => setTimeout(r));
+                }
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(await zip.generateAsync({type: 'blob'}));
+                a.download = 'qr-semua-meja.zip';
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                this.toast(`${active.length} QR diunduh`);
+            } catch (e) {
+                this.toast('Gagal menyiapkan QR', true);
+            } finally {
+                this.qrZipping = false;
+            }
         },
 
         // ---------- staf ----------
