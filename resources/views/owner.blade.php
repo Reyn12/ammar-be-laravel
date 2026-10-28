@@ -277,7 +277,7 @@
         <div x-show="qr" x-transition.opacity class="fixed inset-0 z-30 bg-stone-900/40 grid place-items-center p-4" @keydown.escape.window="qr = null" @click.self="qr = null">
             <div class="bg-white rounded-2xl w-full max-w-xs p-6 text-center space-y-3 shadow-xl">
                 <h3 class="font-semibold text-lg" x-text="'QR Meja ' + qr?.table_number"></h3>
-                <div id="qr-box" class="mx-auto w-[220px] h-[220px]"></div>
+                <img :src="qrCard" alt="" class="mx-auto w-[220px] rounded-lg shadow ring-1 ring-stone-200" x-show="qrCard">
                 <p class="text-xs text-stone-400 break-all" x-text="qr?.qr_url"></p>
                 <div class="flex gap-2 justify-center text-sm">
                     <button @click="downloadQr()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white">Unduh PNG</button>
@@ -442,7 +442,7 @@ function ownerApp() {
         orders: [], tables: [], staff: [], products: [], shifts: [], categories: [],
         compSearch: '', catFilter: 'all', catModal: false, newCategory: '', catError: '', pm: null, pmError: '',
         search: '', orderFilter: 'all',
-        modal: null, modalError: '', qr: null,
+        modal: null, modalError: '', qr: null, qrCard: null,
         toastMsg: '', toastErr: false, _t: null,
 
         init() {
@@ -573,17 +573,108 @@ function ownerApp() {
         },
         showQr(t) {
             this.qr = t;
-            this.$nextTick(() => {
-                const box = document.getElementById('qr-box');
-                box.innerHTML = '';
-                new QRCode(box, {text: t.qr_url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M});
+            this.qrCard = this.buildQrCard(t);
+        },
+        // Kartu meja siap cetak, ukuran A6 @300dpi (1240x1748).
+        buildQrCard(t) {
+            const W = 1240, H = 1748, M = 56, QR = 720;
+            const font = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+            const amber = '#f59e0b', amberDark = '#d97706', ink = '#1c1917', muted = '#78716c';
+
+            const holder = document.createElement('div');
+            new QRCode(holder, {text: t.qr_url, width: QR, height: QR, colorDark: ink, correctLevel: QRCode.CorrectLevel.H});
+            const qrCanvas = holder.querySelector('canvas');
+
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const ctx = c.getContext('2d');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+
+            // latar amber + kartu putih
+            ctx.fillStyle = amber;
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(M, M, W - M * 2, 1560, 56);
+            ctx.fill();
+
+            // brand: badge "A" + Ammar
+            ctx.font = `700 64px ${font}`;
+            const brandW = 72 + 20 + ctx.measureText('Ammar').width;
+            const bx = (W - brandW) / 2;
+            ctx.fillStyle = amber;
+            ctx.beginPath();
+            ctx.roundRect(bx, 108, 72, 72, 20);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `700 44px ${font}`;
+            ctx.fillText('A', bx + 36, 160);
+            ctx.fillStyle = ink;
+            ctx.font = `700 64px ${font}`;
+            ctx.textAlign = 'left';
+            ctx.fillText('Ammar', bx + 92, 167);
+            ctx.textAlign = 'center';
+
+            // judul
+            ctx.font = `800 80px ${font}`;
+            ctx.fillText('Scan untuk pesan', W / 2, 284);
+            ctx.fillStyle = muted;
+            ctx.font = `400 36px ${font}`;
+            ctx.fillText('Pesan & bayar langsung dari HP kamu', W / 2, 338);
+
+            // QR + bingkai sudut
+            const qx = (W - QR) / 2, qy = 430;
+            ctx.drawImage(qrCanvas, qx, qy, QR, QR);
+            const p = 40, L = 96, x0 = qx - p, y0 = qy - p, x1 = qx + QR + p, y1 = qy + QR + p;
+            ctx.strokeStyle = amber;
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, dx, dy]) => {
+                ctx.beginPath();
+                ctx.moveTo(x, y + L * dy);
+                ctx.lineTo(x, y);
+                ctx.lineTo(x + L * dx, y);
+                ctx.stroke();
             });
+
+            // nomor meja
+            ctx.fillStyle = amberDark;
+            ctx.font = `700 40px ${font}`;
+            ctx.letterSpacing = '14px';
+            ctx.fillText('MEJA', W / 2 + 7, 1290);
+            ctx.letterSpacing = '0px';
+            const num = String(t.table_number);
+            let size = 210;
+            ctx.font = `800 ${size}px ${font}`;
+            while (ctx.measureText(num).width > 900 && size > 80) ctx.font = `800 ${size -= 10}px ${font}`;
+            ctx.fillStyle = ink;
+            ctx.fillText(num, W / 2, 1480);
+
+            // langkah singkat
+            ctx.strokeStyle = '#e7e5e4';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([12, 12]);
+            ctx.beginPath();
+            ctx.moveTo(M + 80, 1528);
+            ctx.lineTo(W - M - 80, 1528);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = muted;
+            ctx.font = `500 32px ${font}`;
+            ctx.fillText('1. Scan QR      2. Pilih menu      3. Bayar', W / 2, 1582);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `600 34px ${font}`;
+            ctx.fillText('Terima kasih sudah berkunjung', W / 2, 1692);
+
+            return c.toDataURL('image/png');
         },
         downloadQr() {
-            const canvas = document.querySelector('#qr-box canvas');
-            if (!canvas) return;
+            if (!this.qrCard) return;
             const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
+            a.href = this.qrCard;
             a.download = `qr-meja-${this.qr.table_number}.png`;
             a.click();
         },
